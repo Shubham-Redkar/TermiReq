@@ -98,6 +98,9 @@ class ANSIParser:
             elif b == 0x0D:                   # CR
                 i += 1
                 yield PrintChar("\r", self._current_style, i - 1)
+            elif b == 0x08:                   # BS (Backspace)
+                i += 1
+                yield MoveCursor(0, -1, False, i - 1)
             elif b == 0x09:                   # TAB (printable-ish)
                 i += 1
                 yield PrintChar("\t", self._current_style, i - 1)
