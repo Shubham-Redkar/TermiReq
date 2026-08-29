@@ -1,4 +1,9 @@
-"""command line interface (T5/T6a/T7)."""
+"""Command line interface (T5/T6a/T7).
+
+This module provides the main entrypoint for the TermiReq CLI. It parses
+user arguments, orchestrates the PTY runner and parser, and formats the
+output (either as human-readable text or machine-readable JSON).
+"""
 
 import argparse
 import sys
@@ -8,9 +13,10 @@ from src.contracts import ScreenState, Cell, CommandChunk, CommandFinished
 from src.runner import run_commands
 from src.parser import ANSIParser
 from src.screen import apply_events
-from src.diff import diff_screens
+from src.diff import diff_screens, DiffResult
 
 def create_parser() -> argparse.ArgumentParser:
+    """Create and configure the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="TermiReq (tyydiff): Terminal screen diffing tool."
     )
@@ -39,6 +45,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 def create_empty_state(rows: int, cols: int) -> ScreenState:
+    """Create a blank ScreenState for a given terminal geometry."""
     return ScreenState(
         rows=rows,
         cols=cols,
@@ -52,7 +59,8 @@ import dataclasses
 import platform
 import subprocess
 
-def speak_summary(command: str, diff_result) -> None:
+def speak_summary(command: str, diff_result: DiffResult) -> None:
+    """Read a high-level summary of the diff out loud using system TTS."""
     num_changes = len(diff_result.changes)
     summary = f"Command {command} finished. "
     if getattr(diff_result, "scrolled", False):
@@ -69,7 +77,8 @@ def speak_summary(command: str, diff_result) -> None:
     except FileNotFoundError:
         pass  # Speech engine not installed
 
-def print_diff(diff_result) -> None:
+def print_diff(diff_result: DiffResult) -> None:
+    """Format and print the diff result to stdout for a human reader."""
     if getattr(diff_result, "scrolled", False):
         print(f"  [Scrolled {diff_result.scroll_direction} by {diff_result.scroll_amount} lines]")
     
@@ -85,6 +94,7 @@ def print_diff(diff_result) -> None:
         print("  [No changes detected]")
 
 def main(args: List[str] | None = None) -> int:
+    """Main CLI execution flow."""
     parser = create_parser()
     parsed_args = parser.parse_args(args)
 

@@ -67,6 +67,7 @@ def apply_events(state: ScreenState, events) -> None:
 # --------------------------------------------------------------------------- #
 
 def _print_char(state: ScreenState, event: PrintChar) -> None:
+    """Print a character to the screen, advancing the cursor and handling wraps."""
     rows, cols = state.rows, state.cols
     row, col = state.cursor_row, state.cursor_col
 
@@ -99,6 +100,7 @@ def _print_char(state: ScreenState, event: PrintChar) -> None:
 
 
 def _move_cursor(state: ScreenState, event: MoveCursor) -> None:
+    """Move the cursor absolutely or relatively, clamping to screen boundaries."""
     rows, cols = state.rows, state.cols
     if event.absolute:
         state.cursor_row = max(0, min(rows - 1, event.row))
@@ -112,6 +114,7 @@ def _move_cursor(state: ScreenState, event: MoveCursor) -> None:
 
 
 def _clear_screen(state: ScreenState, event: ClearScreen) -> None:
+    """Clear the screen (or a portion of it) depending on the event mode."""
     rows, cols = state.rows, state.cols
     r, c = state.cursor_row, state.cursor_col
     if event.mode == 0:               # cursor -> end of screen
@@ -130,6 +133,7 @@ def _clear_screen(state: ScreenState, event: ClearScreen) -> None:
 
 
 def _clear_line(state: ScreenState, event: ClearLine) -> None:
+    """Clear the current line (or a portion of it) depending on the event mode."""
     cols = state.cols
     r, c = state.cursor_row, state.cursor_col
     if event.mode == 0:               # cursor -> end of line

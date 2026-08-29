@@ -12,6 +12,7 @@ def _blank_cell() -> Cell:
 
 
 def _row_similarity(left: list[Cell], right: list[Cell]) -> float:
+    """Calculate the percentage of identical cells between two rows."""
     if not left:
         return 1.0
     matches = sum(1 for a, b in zip(left, right, strict=False) if a == b)
@@ -19,6 +20,7 @@ def _row_similarity(left: list[Cell], right: list[Cell]) -> float:
 
 
 def _is_blank_row(row: list[Cell]) -> bool:
+    """Check if a row consists entirely of blank cells."""
     blank = _blank_cell()
     return all(cell == blank for cell in row)
 
@@ -84,6 +86,7 @@ def _compare_cells(
     row_range: range | None = None,
     col_range: range | None = None,
 ) -> list[CellChange]:
+    """Compare two ScreenStates cell by cell and return a list of differences."""
     changes: list[CellChange] = []
     max_r = min(before.rows, after.rows)
     max_c = min(before.cols, after.cols)
