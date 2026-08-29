@@ -1,0 +1,1 @@
+Zero third-party runtime dependencies (stdlib only). See STDLIB.md.
