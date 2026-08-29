@@ -30,7 +30,7 @@ TAB_STOP = 8
 
 
 def _empty_row(cols: int) -> List[Cell]:
-    return [Cell() for _ in range(cols)]
+    return [Cell(" ") for _ in range(cols)]
 
 
 def apply_event(state: ScreenState, event) -> None:
@@ -70,12 +70,18 @@ def _print_char(state: ScreenState, event: PrintChar) -> None:
     rows, cols = state.rows, state.cols
     row, col = state.cursor_row, state.cursor_col
 
+    if event.char == "\r":
+        state.cursor_col = 0
+        return
     if event.char == "\t":
         state.cursor_col = min(cols - 1, ((col // TAB_STOP) + 1) * TAB_STOP)
         return
     if event.char == "\n":
         if row + 1 < rows:
             state.cursor_row = row + 1
+        else:
+            state.grid.pop(0)
+            state.grid.append(_empty_row(cols))
         return
 
     if 0 <= row < rows and 0 <= col < cols:
@@ -85,6 +91,10 @@ def _print_char(state: ScreenState, event: PrintChar) -> None:
             state.cursor_col += 1
         elif row + 1 < rows:
             state.cursor_row += 1
+            state.cursor_col = 0
+        else:
+            state.grid.pop(0)
+            state.grid.append(_empty_row(cols))
             state.cursor_col = 0
 
 
@@ -106,14 +116,14 @@ def _clear_screen(state: ScreenState, event: ClearScreen) -> None:
     r, c = state.cursor_row, state.cursor_col
     if event.mode == 0:               # cursor -> end of screen
         for cc in range(c, cols):
-            state.grid[r][cc] = Cell()
+            state.grid[r][cc] = Cell(" ")
         for rr in range(r + 1, rows):
             state.grid[rr] = _empty_row(cols)
     elif event.mode == 1:             # start of screen -> cursor
         for rr in range(0, r):
             state.grid[rr] = _empty_row(cols)
         for cc in range(0, c + 1):
-            state.grid[r][cc] = Cell()
+            state.grid[r][cc] = Cell(" ")
     elif event.mode in (2, 3):        # whole screen (3 == 2 for most terminals)
         for rr in range(rows):
             state.grid[rr] = _empty_row(cols)
@@ -124,10 +134,10 @@ def _clear_line(state: ScreenState, event: ClearLine) -> None:
     r, c = state.cursor_row, state.cursor_col
     if event.mode == 0:               # cursor -> end of line
         for cc in range(c, cols):
-            state.grid[r][cc] = Cell()
+            state.grid[r][cc] = Cell(" ")
     elif event.mode == 1:             # start of line -> cursor
         for cc in range(0, c + 1):
-            state.grid[r][cc] = Cell()
+            state.grid[r][cc] = Cell(" ")
     elif event.mode == 2:             # whole line
         state.grid[r] = _empty_row(cols)
 
