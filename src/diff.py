@@ -84,18 +84,23 @@ def _compare_cells(
     row_range: range | None = None,
     col_range: range | None = None,
 ) -> list[CellChange]:
-    rows = row_range if row_range is not None else range(before.rows)
-    cols = col_range if col_range is not None else range(before.cols)
     changes: list[CellChange] = []
+    max_r = min(before.rows, after.rows)
+    max_c = min(before.cols, after.cols)
+    
+    rows = row_range if row_range is not None else range(max_r)
+    cols = col_range if col_range is not None else range(max_c)
 
-    for row in rows:
-        for col in cols:
-            old_cell = before.grid[row][col]
-            new_cell = after.grid[row][col]
-            if old_cell != new_cell:
-                changes.append(
-                    CellChange(row=row, col=col, old=old_cell, new=new_cell)
-                )
+    for r in rows:
+        if r >= max_r:
+            continue
+        for c in cols:
+            if c >= max_c:
+                continue
+            b_cell = before.grid[r][c]
+            a_cell = after.grid[r][c]
+            if b_cell != a_cell:
+                changes.append(CellChange(row=r, col=c, old=b_cell, new=a_cell))
     return changes
 
 
@@ -110,6 +115,15 @@ def _scroll_change_rows(
     blank = _blank_cell()
 
     if direction == "up":
+        # Check shifted rows for any modifications that happened alongside the scroll
+        for row in range(before.rows - amount):
+            for col in range(before.cols):
+                old_cell = before.grid[row + amount][col]
+                new_cell = after.grid[row][col]
+                if old_cell != new_cell:
+                    changes.append(CellChange(row=row, col=col, old=old_cell, new=new_cell))
+
+        # Check newly exposed rows at the bottom
         for row in range(before.rows - amount, before.rows):
             for col in range(before.cols):
                 new_cell = after.grid[row][col]
@@ -118,6 +132,7 @@ def _scroll_change_rows(
                         CellChange(row=row, col=col, old=blank, new=new_cell)
                     )
     elif direction == "down":
+        # Check newly exposed rows at the top
         for row in range(amount):
             for col in range(before.cols):
                 new_cell = after.grid[row][col]
@@ -125,6 +140,14 @@ def _scroll_change_rows(
                     changes.append(
                         CellChange(row=row, col=col, old=blank, new=new_cell)
                     )
+
+        # Check shifted rows for any modifications
+        for row in range(amount, before.rows):
+            for col in range(before.cols):
+                old_cell = before.grid[row - amount][col]
+                new_cell = after.grid[row][col]
+                if old_cell != new_cell:
+                    changes.append(CellChange(row=row, col=col, old=old_cell, new=new_cell))
     return changes
 
 

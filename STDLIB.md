@@ -63,4 +63,4 @@ The runner captures raw bytes faithfully but the parser/screen layer explicitly 
 | `difflib` / `diff-match-patch` | Cell-by-cell grid comparison | Style-only changes and cursor position matter; text line diff misses them |
 | Heuristic scroll libraries | Shift-matching row similarity in `diff.py` | Detects scroll-up/down so we don't report every line as changed when content shifts |
 
-Scroll detection compares shifted rows between before/after snapshots. When a scroll match exceeds 85% row similarity, the diff reports `scrolled=True` with direction/amount and only lists genuinely new rows — not the shifted content.
+Scroll detection compares shifted rows between before/after snapshots. When a scroll match exceeds 85% row similarity, the diff reports `scrolled=True` with direction/amount, and then accurately diffs both the newly exposed rows and any modifications that happened to the shifted content.
