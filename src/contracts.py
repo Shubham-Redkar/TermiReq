@@ -8,6 +8,7 @@ from typing import Union
 
 @dataclass(frozen=True)
 class Style:
+    """Represents the styling (color, boldness) of a terminal cell."""
     fg_color: str | None = None
     bg_color: str | None = None
     bold: bool = False
@@ -15,6 +16,7 @@ class Style:
 
 @dataclass
 class Cell:
+    """Represents a single character cell on the virtual terminal screen."""
     char: str
     style: Style = field(default_factory=Style)
 
@@ -82,6 +84,7 @@ ParserEvent = Union[
 
 @dataclass
 class ScreenState:
+    """Maintains the 2D grid of Cells and current cursor position."""
     rows: int
     cols: int
     grid: list[list[Cell]]
@@ -104,6 +107,7 @@ class ScreenState:
 
 @dataclass
 class CellChange:
+    """Records a single mutated cell for the final diff output."""
     row: int
     col: int
     old: Cell
@@ -112,6 +116,7 @@ class CellChange:
 
 @dataclass
 class DiffResult:
+    """The aggregate summary of all changes between two ScreenStates."""
     changes: list[CellChange]
     cursor_moved: bool
     new_cursor: tuple[int, int]
@@ -122,6 +127,7 @@ class DiffResult:
 
 @dataclass
 class CommandChunk:
+    """A raw byte chunk emitted by a running subprocess or PTY."""
     command: str
     data: bytes
     command_index: int
@@ -129,6 +135,7 @@ class CommandChunk:
 
 @dataclass
 class CommandFinished:
+    """Emitted when a subprocess completes its execution."""
     command: str
     command_index: int
     exit_code: int
