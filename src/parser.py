@@ -92,10 +92,12 @@ class ANSIParser:
             if b == 0x1B:                     # ESC
                 i, events = self._consume_escape(data, i)
                 yield from events
-            elif b in (0x0A, 0x0D):           # LF / CR
-                # Control characters are handled by the screen layer, not the
-                # parser, so we skip them here (no PrintChar event).
+            elif b == 0x0A:                   # LF
                 i += 1
+                yield PrintChar("\n", self._current_style, i - 1)
+            elif b == 0x0D:                   # CR
+                i += 1
+                yield PrintChar("\r", self._current_style, i - 1)
             elif b == 0x09:                   # TAB (printable-ish)
                 i += 1
                 yield PrintChar("\t", self._current_style, i - 1)
