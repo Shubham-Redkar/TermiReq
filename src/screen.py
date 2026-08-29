@@ -19,12 +19,15 @@ Design decisions baked in (see docs/ttydiff-t0-contract.md):
 
 from __future__ import annotations
 
+import unicodedata
+import unicodedata
 from typing import List, Optional
 
 from .contracts import (
     Cell, ClearLine, ClearScreen, MoveCursor, PrintChar, RestoreCursor,
-    SaveCursor, ScreenState, SetStyle, Style,
+    SaveCursor, ScreenState, SetStyle, SetTitle, Style,
 )
+
 
 TAB_STOP = 8
 
@@ -52,6 +55,8 @@ def apply_event(state: ScreenState, event) -> None:
     elif isinstance(event, SetStyle):
         # The parser bakes style into each PrintChar; nothing to do here.
         return
+    elif isinstance(event, SetTitle):
+        state.title = event.title
     # UnknownSequence and anything unrecognized: ignore (the parser already
     # emitted a diagnostic; we must never crash the pipeline).
 
@@ -86,9 +91,16 @@ def _print_char(state: ScreenState, event: PrintChar) -> None:
 
     if 0 <= row < rows and 0 <= col < cols:
         state.grid[row][col] = Cell(event.char, event.style)
-        # Advance cursor one column, wrapping off the right edge.
-        if col + 1 < cols:
-            state.cursor_col += 1
+        
+        # Calculate display width: 'W' (Wide) and 'F' (Fullwidth) take 2 columns
+        width = 0
+        for ch in event.char:
+            eaw = unicodedata.east_asian_width(ch)
+            width += 2 if eaw in ('W', 'F') else 1
+        
+        # Advance cursor by width, wrapping off the right edge.
+        if col + width < cols:
+            state.cursor_col += width
         elif row + 1 < rows:
             state.cursor_row += 1
             state.cursor_col = 0

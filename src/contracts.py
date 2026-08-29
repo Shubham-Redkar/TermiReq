@@ -63,6 +63,12 @@ class RestoreCursor:
 
 
 @dataclass
+class SetTitle:
+    title: str
+    byte_offset: int
+
+
+@dataclass
 class UnknownSequence:
     raw_bytes: bytes
     byte_offset: int
@@ -76,6 +82,7 @@ ParserEvent = Union[
     SetStyle,
     SaveCursor,
     RestoreCursor,
+    SetTitle,
     UnknownSequence,
 ]
 
@@ -87,6 +94,16 @@ class ScreenState:
     grid: list[list[Cell]]
     cursor_row: int
     cursor_col: int
+    title: str | None = None
+
+    @classmethod
+    def blank(cls, rows: int, cols: int) -> ScreenState:
+        """Create a blank screen of given dimensions."""
+        return cls(
+            rows=rows, cols=cols,
+            grid=[[Cell(" ") for _ in range(cols)] for _ in range(rows)],
+            cursor_row=0, cursor_col=0,
+        )
 
     def snapshot(self) -> ScreenState:
         """Return a deep copy for before/after diff comparisons."""
@@ -99,7 +116,9 @@ class ScreenState:
             ],
             cursor_row=self.cursor_row,
             cursor_col=self.cursor_col,
+            title=self.title,
         )
+
 
 
 @dataclass
