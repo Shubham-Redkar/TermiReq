@@ -1,4 +1,9 @@
-"""command line interface (T5/T6a/T7)."""
+"""Command line interface (T5/T6a/T7).
+
+This module provides the main entrypoint for the TermiReq CLI. It parses
+user arguments, orchestrates the PTY runner and parser, and formats the
+output (either as human-readable text or machine-readable JSON).
+"""
 
 import argparse
 import sys
@@ -8,9 +13,10 @@ from src.contracts import ScreenState, Cell, CommandChunk, CommandFinished
 from src.runner import run_commands
 from src.parser import ANSIParser
 from src.screen import apply_events
-from src.diff import diff_screens
+from src.diff import diff_screens, DiffResult
 
 def create_parser() -> argparse.ArgumentParser:
+    """Create and configure the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="TermiReq (tyydiff): Terminal screen diffing tool."
     )
@@ -25,10 +31,21 @@ def create_parser() -> argparse.ArgumentParser:
         nargs="+",
         help="One or more shell commands to execute"
     )
+    run_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output diff as machine-readable JSON"
+    )
+    run_parser.add_argument(
+        "--speak",
+        action="store_true",
+        help="Read the diff out loud (macOS/Linux)"
+    )
 
     return parser
 
 def create_empty_state(rows: int, cols: int) -> ScreenState:
+    """Create a blank ScreenState for a given terminal geometry."""
     return ScreenState(
         rows=rows,
         cols=cols,
@@ -37,7 +54,31 @@ def create_empty_state(rows: int, cols: int) -> ScreenState:
         cursor_col=0,
     )
 
-def print_diff(diff_result) -> None:
+import json
+import dataclasses
+import platform
+import subprocess
+
+def speak_summary(command: str, diff_result: DiffResult) -> None:
+    """Read a high-level summary of the diff out loud using system TTS."""
+    num_changes = len(diff_result.changes)
+    summary = f"Command {command} finished. "
+    if getattr(diff_result, "scrolled", False):
+        summary += f"Screen scrolled {diff_result.scroll_direction} by {diff_result.scroll_amount} lines. "
+    summary += f"{num_changes} cells changed on screen."
+
+    sys_name = platform.system()
+    try:
+        if sys_name == "Darwin":
+            subprocess.run(["say", summary], check=False)
+        elif sys_name == "Linux":
+            # Slow down speed (-s 130), set pitch (-p 50), add word gap (-g 2), use female voice 3 (-v en+f3)
+            subprocess.run(["espeak", "-s", "130", "-p", "50", "-g", "2", "-v", "en+f3", summary], check=False, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        pass  # Speech engine not installed
+
+def print_diff(diff_result: DiffResult) -> None:
+    """Format and print the diff result to stdout for a human reader."""
     if getattr(diff_result, "scrolled", False):
         print(f"  [Scrolled {diff_result.scroll_direction} by {diff_result.scroll_amount} lines]")
     
@@ -53,6 +94,7 @@ def print_diff(diff_result) -> None:
         print("  [No changes detected]")
 
 def main(args: List[str] | None = None) -> int:
+    """Main CLI execution flow."""
     parser = create_parser()
     parsed_args = parser.parse_args(args)
 
@@ -72,11 +114,22 @@ def main(args: List[str] | None = None) -> int:
                 apply_events(current_state, screen_events)
                 
             elif isinstance(event, CommandFinished):
-                print(f"--- Command '{event.command}' finished (exit code {event.exit_code}) ---")
                 after_state = current_state.snapshot()
                 diff_result = diff_screens(before_state, after_state)
                 
-                print_diff(diff_result)
+                if parsed_args.json:
+                    data = {
+                        "command": event.command,
+                        "exit_code": event.exit_code,
+                        "diff": dataclasses.asdict(diff_result)
+                    }
+                    print(json.dumps(data, indent=2))
+                else:
+                    print(f"--- Command '{event.command}' finished (exit code {event.exit_code}) ---")
+                    print_diff(diff_result)
+                
+                if parsed_args.speak:
+                    speak_summary(event.command, diff_result)
                 
                 # Reset for next command
                 current_state = create_empty_state(rows, cols)
