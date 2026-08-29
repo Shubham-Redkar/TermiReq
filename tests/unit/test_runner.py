@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import unittest
 from collections.abc import Generator
+from unittest import mock
 
 from src.contracts import CommandChunk, CommandFinished, RunnerEvent
-from src.runner import pty_supported, run_commands
+from src.runner import detect_terminal_geometry, pty_supported, run_commands
 
 
 def _collect_events(
@@ -117,6 +119,77 @@ class TestPtySupported(unittest.TestCase):
     def test_windows_reports_no_pty(self) -> None:
         if sys.platform == "win32":
             self.assertFalse(pty_supported())
+
+
+class TestTerminalGeometry(unittest.TestCase):
+    def test_detect_maps_columns_to_cols_and_lines_to_rows(self) -> None:
+        fake = os.terminal_size((120, 40))  # (columns, lines)
+        with mock.patch("src.runner.shutil.get_terminal_size", return_value=fake):
+            rows, cols = detect_terminal_geometry()
+        self.assertEqual((rows, cols), (40, 120))
+
+    def test_detect_uses_fallback_when_size_is_zero(self) -> None:
+        # Some environments report 0x0; we must not hand a 0-sized PTY down.
+        fake = os.terminal_size((0, 0))
+        with mock.patch("src.runner.shutil.get_terminal_size", return_value=fake):
+            rows, cols = detect_terminal_geometry(fallback_rows=24, fallback_cols=80)
+        self.assertEqual((rows, cols), (24, 80))
+
+    def test_run_commands_autodetects_geometry_when_not_given(self) -> None:
+        captured: dict[str, int] = {}
+
+        def _recorder(
+            command: str,
+            command_index: int,
+            *,
+            timeout: float | None = None,
+            rows: int = 24,
+            cols: int = 80,
+        ) -> Generator[RunnerEvent, None, None]:
+            captured["rows"] = rows
+            captured["cols"] = cols
+            yield CommandChunk(command=command, data=b"", command_index=command_index)
+            yield CommandFinished(
+                command=command, command_index=command_index, exit_code=0
+            )
+
+        with mock.patch(
+            "src.runner.detect_terminal_geometry", return_value=(50, 100)
+        ):
+            list(run_commands(["x"], use_pty=False, runner_fn=_recorder))
+
+        self.assertEqual(captured, {"rows": 50, "cols": 100})
+
+    def test_run_commands_respects_explicit_geometry(self) -> None:
+        captured: dict[str, int] = {}
+
+        def _recorder(
+            command: str,
+            command_index: int,
+            *,
+            timeout: float | None = None,
+            rows: int = 24,
+            cols: int = 80,
+        ) -> Generator[RunnerEvent, None, None]:
+            captured["rows"] = rows
+            captured["cols"] = cols
+            yield CommandChunk(command=command, data=b"", command_index=command_index)
+            yield CommandFinished(
+                command=command, command_index=command_index, exit_code=0
+            )
+
+        # Explicit values must bypass auto-detection entirely.
+        with mock.patch(
+            "src.runner.detect_terminal_geometry",
+            side_effect=AssertionError("should not auto-detect"),
+        ):
+            list(
+                run_commands(
+                    ["x"], use_pty=False, runner_fn=_recorder, rows=10, cols=20
+                )
+            )
+
+        self.assertEqual(captured, {"rows": 10, "cols": 20})
 
 
 if __name__ == "__main__":

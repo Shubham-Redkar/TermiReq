@@ -10,10 +10,10 @@ import sys
 from typing import List
 
 from src.contracts import ScreenState, Cell, CommandChunk, CommandFinished
-from src.runner import run_commands
+from src.runner import run_commands, detect_terminal_geometry
 from src.parser import ANSIParser
 from src.screen import apply_events
-from src.diff import diff_screens, DiffResult
+from src.diff import diff_screens, format_diff, DiffResult
 
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the CLI argument parser."""
@@ -55,6 +55,7 @@ def create_empty_state(rows: int, cols: int) -> ScreenState:
     )
 
 import json
+import os
 import dataclasses
 import platform
 import subprocess
@@ -77,21 +78,25 @@ def speak_summary(command: str, diff_result: DiffResult) -> None:
     except FileNotFoundError:
         pass  # Speech engine not installed
 
-def print_diff(diff_result: DiffResult) -> None:
-    """Format and print the diff result to stdout for a human reader."""
-    if getattr(diff_result, "scrolled", False):
-        print(f"  [Scrolled {diff_result.scroll_direction} by {diff_result.scroll_amount} lines]")
-    
-    if diff_result.cursor_moved:
-        print(f"  [Cursor moved to {diff_result.new_cursor}]")
-        
-    for change in diff_result.changes:
-        old_char = change.old.char if change.old.char != " " else "<space>"
-        new_char = change.new.char if change.new.char != " " else "<space>"
-        print(f"  Row {change.row:02} Col {change.col:02}: {old_char!r} -> {new_char!r}")
-        
-    if not diff_result.changes and not getattr(diff_result, "scrolled", False) and not diff_result.cursor_moved:
-        print("  [No changes detected]")
+def _should_colorize() -> bool:
+    """Decide whether diff output should include ANSI color.
+
+    Honors the NO_COLOR convention (https://no-color.org) and only colorizes
+    when stdout is an interactive terminal, so escape codes never end up in a
+    redirected file or a downstream pipe.
+    """
+    if os.environ.get("NO_COLOR"):
+        return False
+    return sys.stdout.isatty()
+
+
+def print_diff(diff_result: DiffResult, *, color: bool = True) -> None:
+    """Format and print the diff result to stdout for a human reader.
+
+    Formatting now lives in :func:`src.diff.format_diff`; the CLI just prints
+    the rendered string and decides whether color is appropriate.
+    """
+    print(format_diff(diff_result, color=color))
 
 def main(args: List[str] | None = None) -> int:
     """Main CLI execution flow."""
@@ -99,24 +104,28 @@ def main(args: List[str] | None = None) -> int:
     parsed_args = parser.parse_args(args)
 
     if parsed_args.subcommand == "run":
-        rows = 24
-        cols = 80
-        
+        # Detect the real terminal size once and use it for BOTH the PTY
+        # (via run_commands) and our virtual screen. They must match, or the
+        # program's output is formatted for a different width than the grid we
+        # diff against and changes get silently truncated.
+        rows, cols = detect_terminal_geometry()
+        use_color = _should_colorize()
+
         runner_events = run_commands(parsed_args.commands, rows=rows, cols=cols)
-        
+
         current_state = create_empty_state(rows, cols)
         before_state = current_state.snapshot()
         ansi_parser = ANSIParser()
-        
+
         for event in runner_events:
             if isinstance(event, CommandChunk):
                 screen_events = ansi_parser.parse(event.data)
                 apply_events(current_state, screen_events)
-                
+
             elif isinstance(event, CommandFinished):
                 after_state = current_state.snapshot()
                 diff_result = diff_screens(before_state, after_state)
-                
+
                 if parsed_args.json:
                     data = {
                         "command": event.command,
@@ -126,7 +135,7 @@ def main(args: List[str] | None = None) -> int:
                     print(json.dumps(data, indent=2))
                 else:
                     print(f"--- Command '{event.command}' finished (exit code {event.exit_code}) ---")
-                    print_diff(diff_result)
+                    print_diff(diff_result, color=use_color)
                 
                 if parsed_args.speak:
                     speak_summary(event.command, diff_result)

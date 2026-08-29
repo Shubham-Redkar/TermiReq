@@ -9,6 +9,7 @@ from __future__ import annotations
 import errno
 import os
 import select
+import shutil
 import signal
 import subprocess
 import sys
@@ -25,6 +26,31 @@ if sys.platform != "win32":
 
 # Exit code used when a command is interrupted (Ctrl-C) or skipped.
 INTERRUPTED_EXIT_CODE = 130
+
+# Geometry used when the terminal size can't be detected (output not attached
+# to a real terminal, e.g. piped or under tests). Matches the classic VT100
+# default so behavior is unchanged in non-interactive contexts.
+_FALLBACK_ROWS = 24
+_FALLBACK_COLS = 80
+
+
+def detect_terminal_geometry(
+    fallback_rows: int = _FALLBACK_ROWS,
+    fallback_cols: int = _FALLBACK_COLS,
+) -> tuple[int, int]:
+    """Return the current terminal size as ``(rows, cols)``.
+
+    Uses :func:`shutil.get_terminal_size` (stdlib) so the PTY matches the
+    user's actual window instead of assuming 80x24. When output is not attached
+    to a terminal it falls back to ``(fallback_rows, fallback_cols)``.
+
+    Note: ``shutil`` reports size as ``(columns, lines)``; we return
+    ``(rows, cols)`` to match the rest of the runner's argument order.
+    """
+    size = shutil.get_terminal_size(fallback=(fallback_cols, fallback_rows))
+    rows = size.lines or fallback_rows
+    cols = size.columns or fallback_cols
+    return rows, cols
 
 
 def pty_supported() -> bool:
@@ -192,8 +218,8 @@ def run_commands(
     commands: list[str],
     *,
     timeout: float | None = None,
-    rows: int = 24,
-    cols: int = 80,
+    rows: int | None = None,
+    cols: int | None = None,
     use_pty: bool | None = None,
     runner_fn: Callable[..., Generator[RunnerEvent, None, None]] | None = None,
 ) -> Generator[RunnerEvent, None, None]:
@@ -201,9 +227,20 @@ def run_commands(
 
     Each command must finish (or be skipped/timed out) before the next starts.
     Ctrl-C during a command kills that command and continues with the next one.
+
+    ``rows``/``cols`` size the pseudo-terminal. When either is ``None`` it is
+    auto-detected from the current terminal via :func:`detect_terminal_geometry`
+    (falling back to 24x80 when output isn't a terminal). Callers that maintain
+    their own virtual screen (e.g. the CLI) should detect once and pass explicit
+    values to both this function and the screen, so the two geometries match.
     """
     if not commands:
         return
+
+    if rows is None or cols is None:
+        detected_rows, detected_cols = detect_terminal_geometry()
+        rows = detected_rows if rows is None else rows
+        cols = detected_cols if cols is None else cols
 
     use_real_pty = pty_supported() if use_pty is None else use_pty
     single_runner = runner_fn or (
