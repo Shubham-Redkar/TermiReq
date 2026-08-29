@@ -64,7 +64,8 @@ def speak_summary(command: str, diff_result) -> None:
         if sys_name == "Darwin":
             subprocess.run(["say", summary], check=False)
         elif sys_name == "Linux":
-            subprocess.run(["espeak", summary], check=False, stderr=subprocess.DEVNULL)
+            # Slow down speed (-s 130), set pitch (-p 50), add word gap (-g 2), use female voice 3 (-v en+f3)
+            subprocess.run(["espeak", "-s", "130", "-p", "50", "-g", "2", "-v", "en+f3", summary], check=False, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
         pass  # Speech engine not installed
 
