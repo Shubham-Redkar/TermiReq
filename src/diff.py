@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Iterable
+
 from src.contracts import Cell, CellChange, DiffResult, ScreenState
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 _SCROLL_MATCH_THRESHOLD = 0.85
 
@@ -75,6 +80,10 @@ def _detect_scroll(
                 best_direction = "down"
 
     if best_amount > 0 and best_direction is not None:
+        logger.debug(
+            "scroll detected dir=%s amount=%d score=%.3f",
+            best_direction, best_amount, best_score,
+        )
         return True, best_direction, best_amount
     return False, None, 0
 
@@ -189,9 +198,41 @@ def diff_screens(before: ScreenState, after: ScreenState) -> DiffResult:
     )
 
 
-# --------------------------------------------------------------------------- #
-# Human-readable formatting (git-style, ANSI-colored)
-# --------------------------------------------------------------------------- #
+def diff_screens_incremental(
+    before: ScreenState,
+    after: ScreenState,
+    dirty_rows: Iterable[int],
+) -> DiffResult:
+    """Incremental fast-path diff over only the rows known to have changed.
+
+    This is the Task 3 optimization: a caller that tracked exactly which rows
+    it mutated (via :class:`src.screen.DirtyRows`) can skip the O(rows^2 * cols)
+    scroll-detection scan and only re-compare the dirty rows —
+    O(len(dirty_rows) * cols).
+
+    Contract: use this only when **no scroll occurred** (the dirty tracker flips
+    to "all rows" on a scroll, and callers should fall back to
+    :func:`diff_screens` then). Given a superset of the truly-changed rows, the
+    ``changes`` returned here are identical to the non-scroll branch of
+    :func:`diff_screens`. Geometry changes fall back to a full comparison.
+    """
+    cursor_moved = (
+        before.cursor_row != after.cursor_row or before.cursor_col != after.cursor_col
+    )
+    new_cursor = (after.cursor_row, after.cursor_col)
+
+    if before.rows != after.rows or before.cols != after.cols:
+        changes = _compare_cells(before, after)
+    else:
+        max_r = min(before.rows, after.rows)
+        rows = sorted({r for r in dirty_rows if 0 <= r < max_r})
+        changes = _compare_cells(before, after, row_range=rows)
+
+    return DiffResult(
+        changes=changes,
+        cursor_moved=cursor_moved,
+        new_cursor=new_cursor,
+    )
 
 # Raw ANSI color codes. Kept here (not in the CLI) so the diff layer owns the
 # full "render a DiffResult for a human" concern; the CLI just prints the

@@ -9,7 +9,13 @@ from collections.abc import Generator
 from unittest import mock
 
 from src.contracts import CommandChunk, CommandFinished, RunnerEvent
-from src.runner import detect_terminal_geometry, pty_supported, run_commands
+from src.runner import (
+    describe_platform,
+    detect_terminal_geometry,
+    is_wsl,
+    pty_supported,
+    run_commands,
+)
 
 
 def _collect_events(
@@ -119,6 +125,35 @@ class TestPtySupported(unittest.TestCase):
     def test_windows_reports_no_pty(self) -> None:
         if sys.platform == "win32":
             self.assertFalse(pty_supported())
+
+
+class TestWslDetection(unittest.TestCase):
+    def test_non_linux_is_not_wsl(self) -> None:
+        with mock.patch("src.runner.sys") as fake_sys:
+            fake_sys.platform = "win32"
+            self.assertFalse(is_wsl())
+
+    def test_env_var_flags_wsl(self) -> None:
+        with mock.patch("src.runner.sys") as fake_sys, mock.patch.dict(
+            os.environ, {"WSL_DISTRO_NAME": "Ubuntu"}, clear=False
+        ):
+            fake_sys.platform = "linux"
+            self.assertTrue(is_wsl())
+
+    def test_proc_version_microsoft_marker(self) -> None:
+        m = mock.mock_open(read_data="Linux version 5.15.0-microsoft-standard")
+        with mock.patch("src.runner.sys") as fake_sys, mock.patch.dict(
+            os.environ, {}, clear=True
+        ), mock.patch("builtins.open", m):
+            fake_sys.platform = "linux"
+            self.assertTrue(is_wsl())
+
+    def test_describe_platform_mentions_backend(self) -> None:
+        desc = describe_platform()
+        self.assertTrue(
+            any(word in desc for word in ("pty", "subprocess")),
+            desc,
+        )
 
 
 class TestTerminalGeometry(unittest.TestCase):

@@ -3,7 +3,9 @@
 import unittest
 
 from src.contracts import Cell, CellChange, DiffResult, ScreenState, Style
-from src.diff import diff_screens, format_diff
+from src.diff import diff_screens, diff_screens_incremental, format_diff
+from src.screen import DirtyRows, apply_events
+from src.parser import ANSIParser
 
 
 def _make_screen(
@@ -199,6 +201,53 @@ class TestFormatDiff(unittest.TestCase):
         out = format_diff(diff, color=False)
         self.assertIn("[Cursor moved to (3, 7)]", out)
         self.assertNotIn("No changes detected", out)
+
+
+class TestIncrementalDiff(unittest.TestCase):
+    """diff_screens_incremental must match the full diff on non-scroll edits."""
+
+    def test_matches_full_diff_for_single_row(self) -> None:
+        before = _make_screen(4, 5, ["aaaaa", "bbbbb", "ccccc", "ddddd"])
+        after = _make_screen(4, 5, ["aaaaa", "bXbbb", "ccccc", "ddddd"])
+        full = diff_screens(before, after)
+        incr = diff_screens_incremental(before, after, [1])
+        self.assertEqual(incr.changes, full.changes)
+
+    def test_superset_of_dirty_rows_is_safe(self) -> None:
+        before = _make_screen(4, 5, ["aaaaa", "bbbbb", "ccccc", "ddddd"])
+        after = _make_screen(4, 5, ["aaaaa", "bXbbb", "ccccc", "ddddd"])
+        # Passing extra (clean) rows still yields exactly the real change.
+        incr = diff_screens_incremental(before, after, [0, 1, 2, 3])
+        self.assertEqual(len(incr.changes), 1)
+        self.assertEqual(incr.changes[0].row, 1)
+
+    def test_out_of_range_rows_ignored(self) -> None:
+        before = _make_screen(2, 3, ["abc", "def"])
+        after = before.snapshot()
+        incr = diff_screens_incremental(before, after, [5, -1, 99])
+        self.assertEqual(incr.changes, [])
+
+    def test_tracks_cursor(self) -> None:
+        before = _make_screen(2, 3, ["abc", "def"], cursor_row=0, cursor_col=0)
+        after = _make_screen(2, 3, ["abc", "def"], cursor_row=1, cursor_col=2)
+        incr = diff_screens_incremental(before, after, [])
+        self.assertTrue(incr.cursor_moved)
+        self.assertEqual(incr.new_cursor, (1, 2))
+
+    def test_dirty_tracker_end_to_end(self) -> None:
+        # Apply real parser output while tracking dirty rows, then confirm the
+        # incremental diff equals the full diff.
+        before = ScreenState.blank(6, 20)
+        after = before.snapshot()
+        dirty = DirtyRows()
+        parser = ANSIParser()
+        # Move to row 3 (CUP is 1-based) and write text -> only that row dirties.
+        apply_events(after, parser.parse(b"\x1b[4;1HHello"), dirty=dirty)
+        self.assertFalse(dirty.all)
+        self.assertEqual(dirty.rows(after.rows), [3])
+        full = diff_screens(before, after)
+        incr = diff_screens_incremental(before, after, dirty.rows(after.rows))
+        self.assertEqual(incr.changes, full.changes)
 
 
 if __name__ == "__main__":

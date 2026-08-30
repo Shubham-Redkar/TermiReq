@@ -1,0 +1,32 @@
+# TermiReq / ttydiff — sample configuration
+#
+# Copy this to ./config.toml (project root), ./ttydiff.toml, or
+# ~/.config/ttydiff/config.toml, or point at it with `--config PATH`.
+# Every value is optional; omitted keys keep their built-in default.
+# Environment variables (TTYDIFF_*, NO_COLOR) override anything set here.
+
+[terminal]
+# Virtual screen / PTY geometry. Comment out to auto-detect the real terminal.
+# rows = 24
+# cols = 80
+
+[color]
+# enabled: true forces ANSI color on, false forces it off.
+# Omit to decide automatically (color only on an interactive terminal, and
+# never when NO_COLOR is set).
+# enabled = true
+theme = "default"
+
+[accessibility]
+# Emit spoken/streamed announcements of what changed on screen.
+enabled = false
+# backend: auto | speech | stream | null
+#   auto   -> speech on a desktop OS, else null
+#   speech -> platform TTS (say / espeak / spd-say / PowerShell SAPI)
+#   stream -> write announcements as plain text to stream_path (for AT tools)
+#   null   -> discard (no output)
+backend = "auto"
+# speech_rate = 175
+# stream_path = "/tmp/ttydiff-a11y.log"
+# verbosity: summary | detailed
+verbosity = "summary"

@@ -6,14 +6,26 @@ output (either as human-readable text or machine-readable JSON).
 """
 
 import argparse
+import dataclasses
+import json
+import os
 import sys
 from typing import List
 
 from src.contracts import ScreenState, Cell, CommandChunk, CommandFinished
-from src.runner import run_commands, detect_terminal_geometry
+from src.runner import (
+    run_commands,
+    detect_terminal_geometry,
+    describe_platform,
+)
 from src.parser import ANSIParser
 from src.screen import apply_events
 from src.diff import diff_screens, format_diff, DiffResult
+from src.config import Config, load_config
+from src.accessibility import AccessibilityAdapter, get_adapter, summarize_diff
+from src.logger import configure_logging, get_logger
+
+logger = get_logger(__name__)
 
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the CLI argument parser."""
@@ -37,9 +49,42 @@ def create_parser() -> argparse.ArgumentParser:
         help="Output diff as machine-readable JSON"
     )
     run_parser.add_argument(
+        "--config",
+        metavar="PATH",
+        default=None,
+        help="Path to a config.toml (overrides the search path)"
+    )
+    run_parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable ANSI color in the diff output"
+    )
+    run_parser.add_argument(
+        "--accessibility",
+        action="store_true",
+        help="Emit accessibility announcements of what changed"
+    )
+    run_parser.add_argument(
+        "--a11y-backend",
+        choices=["auto", "speech", "stream", "null"],
+        default=None,
+        help="Accessibility backend to use (implies --accessibility)"
+    )
+    run_parser.add_argument(
         "--speak",
         action="store_true",
-        help="Read the diff out loud (macOS/Linux)"
+        help="Read the diff out loud (alias for --accessibility --a11y-backend speech)"
+    )
+    run_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Log pipeline steps to stderr at INFO level"
+    )
+    run_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Log per-event detail to stderr at DEBUG level (implies verbose)"
     )
 
     return parser
@@ -54,29 +99,6 @@ def create_empty_state(rows: int, cols: int) -> ScreenState:
         cursor_col=0,
     )
 
-import json
-import os
-import dataclasses
-import platform
-import subprocess
-
-def speak_summary(command: str, diff_result: DiffResult) -> None:
-    """Read a high-level summary of the diff out loud using system TTS."""
-    num_changes = len(diff_result.changes)
-    summary = f"Command {command} finished. "
-    if getattr(diff_result, "scrolled", False):
-        summary += f"Screen scrolled {diff_result.scroll_direction} by {diff_result.scroll_amount} lines. "
-    summary += f"{num_changes} cells changed on screen."
-
-    sys_name = platform.system()
-    try:
-        if sys_name == "Darwin":
-            subprocess.run(["say", summary], check=False)
-        elif sys_name == "Linux":
-            # Slow down speed (-s 130), set pitch (-p 50), add word gap (-g 2), use female voice 3 (-v en+f3)
-            subprocess.run(["espeak", "-s", "130", "-p", "50", "-g", "2", "-v", "en+f3", summary], check=False, stderr=subprocess.DEVNULL)
-    except FileNotFoundError:
-        pass  # Speech engine not installed
 
 def _should_colorize() -> bool:
     """Decide whether diff output should include ANSI color.
@@ -90,12 +112,38 @@ def _should_colorize() -> bool:
     return sys.stdout.isatty()
 
 
-def print_diff(diff_result: DiffResult, *, color: bool = True) -> None:
-    """Format and print the diff result to stdout for a human reader.
+def resolve_color(config: Config, *, no_color_flag: bool) -> bool:
+    """Combine the --no-color flag, config, and auto-detection into a decision.
 
-    Formatting now lives in :func:`src.diff.format_diff`; the CLI just prints
-    the rendered string and decides whether color is appropriate.
+    Precedence: an explicit ``--no-color`` wins; then a config value if set;
+    otherwise fall back to :func:`_should_colorize` (tty + NO_COLOR aware).
     """
+    if no_color_flag:
+        return False
+    if config.color.enabled is not None:
+        return config.color.enabled
+    return _should_colorize()
+
+
+def build_config(parsed_args) -> Config:
+    """Load config from disk/env, then layer CLI-flag overrides on top."""
+    config = load_config(getattr(parsed_args, "config", None))
+
+    # CLI accessibility flags override the file/env config.
+    if getattr(parsed_args, "speak", False):
+        config.accessibility.enabled = True
+        config.accessibility.backend = "speech"
+    if getattr(parsed_args, "accessibility", False):
+        config.accessibility.enabled = True
+    if getattr(parsed_args, "a11y_backend", None):
+        config.accessibility.enabled = True
+        config.accessibility.backend = parsed_args.a11y_backend
+
+    return config
+
+
+def print_diff(diff_result: DiffResult, *, color: bool = True) -> None:
+    """Format and print the diff result to stdout for a human reader."""
     print(format_diff(diff_result, color=color))
 
 def main(args: List[str] | None = None) -> int:
@@ -104,47 +152,110 @@ def main(args: List[str] | None = None) -> int:
     parsed_args = parser.parse_args(args)
 
     if parsed_args.subcommand == "run":
+        root_logger = configure_logging(
+            verbose=parsed_args.verbose,
+            debug=parsed_args.debug,
+        )
+        root_logger.debug(
+            "CLI args=%s verbose=%s debug=%s", parsed_args, parsed_args.verbose, parsed_args.debug
+        )
+
+        config = build_config(parsed_args)
+
         # Detect the real terminal size once and use it for BOTH the PTY
         # (via run_commands) and our virtual screen. They must match, or the
         # program's output is formatted for a different width than the grid we
-        # diff against and changes get silently truncated.
-        rows, cols = detect_terminal_geometry()
-        use_color = _should_colorize()
+        # diff against and changes get silently truncated. Config values, when
+        # set, take precedence over auto-detection.
+        detected_rows, detected_cols = detect_terminal_geometry()
+        rows = config.terminal.rows or detected_rows
+        cols = config.terminal.cols or detected_cols
+        root_logger.debug(
+            "geometry detected=%s config=%s using=%s",
+            (detected_rows, detected_cols),
+            (config.terminal.rows, config.terminal.cols),
+            (rows, cols),
+        )
+
+        use_color = resolve_color(config, no_color_flag=parsed_args.no_color)
+        root_logger.debug(
+            "color_enabled=%s (no_color_flag=%s, config=%s, stdout_tty=%s)",
+            use_color, parsed_args.no_color, config.color.enabled, sys.stdout.isatty(),
+        )
+
+        # Build the accessibility adapter once for the whole run. When disabled
+        # this is a NullAdapter and the observer stays off the hot path.
+        adapter = get_adapter(config.accessibility)
+        observer = adapter.announce if adapter.available else None
+        verbosity = config.accessibility.verbosity
+        root_logger.info(
+            "platform=%s a11y_backend=%s observer=%s",
+            describe_platform(),
+            config.accessibility.backend,
+            "active" if observer is not None else "inactive",
+        )
 
         runner_events = run_commands(parsed_args.commands, rows=rows, cols=cols)
 
         current_state = create_empty_state(rows, cols)
         before_state = current_state.snapshot()
         ansi_parser = ANSIParser()
+        root_logger.debug(
+            "pipeline ready screen=%dx%d parser=%s", rows, cols, type(ansi_parser).__name__
+        )
 
-        for event in runner_events:
-            if isinstance(event, CommandChunk):
-                screen_events = ansi_parser.parse(event.data)
-                apply_events(current_state, screen_events)
+        try:
+            for event in runner_events:
+                if isinstance(event, CommandChunk):
+                    root_logger.debug(
+                        "CommandChunk cmd=%r bytes=%d",
+                        event.command, len(event.data),
+                    )
+                    # Stream parser events straight into the screen instead of
+                    # materializing an intermediate list (batch processing).
+                    apply_events(
+                        current_state,
+                        ansi_parser.feed(event.data),
+                        observer=observer,
+                    )
 
-            elif isinstance(event, CommandFinished):
-                after_state = current_state.snapshot()
-                diff_result = diff_screens(before_state, after_state)
+                elif isinstance(event, CommandFinished):
+                    after_state = current_state.snapshot()
+                    diff_result = diff_screens(before_state, after_state)
+                    root_logger.info(
+                        "command_finished cmd=%r exit_code=%s changes=%d scrolled=%s",
+                        event.command, event.exit_code, len(diff_result.changes),
+                        diff_result.scrolled,
+                    )
 
-                if parsed_args.json:
-                    data = {
-                        "command": event.command,
-                        "exit_code": event.exit_code,
-                        "diff": dataclasses.asdict(diff_result)
-                    }
-                    print(json.dumps(data, indent=2))
-                else:
-                    print(f"--- Command '{event.command}' finished (exit code {event.exit_code}) ---")
-                    print_diff(diff_result, color=use_color)
-                
-                if parsed_args.speak:
-                    speak_summary(event.command, diff_result)
-                
-                # Reset for next command
-                current_state = create_empty_state(rows, cols)
-                before_state = current_state.snapshot()
-                ansi_parser = ANSIParser()
-                
+                    if parsed_args.json:
+                        data = {
+                            "command": event.command,
+                            "exit_code": event.exit_code,
+                            "diff": dataclasses.asdict(diff_result)
+                        }
+                        print(json.dumps(data, indent=2))
+                    else:
+                        print(f"--- Command '{event.command}' finished (exit code {event.exit_code}) ---")
+                        print_diff(diff_result, color=use_color)
+
+                    if adapter.available:
+                        adapter.announce_all(
+                            summarize_diff(
+                                event.command,
+                                event.exit_code,
+                                diff_result,
+                                verbosity=verbosity,
+                            )
+                        )
+
+                    # Reset for next command
+                    current_state = create_empty_state(rows, cols)
+                    before_state = current_state.snapshot()
+                    ansi_parser = ANSIParser()
+        finally:
+            adapter.close()
+
         return 0
 
     return 1

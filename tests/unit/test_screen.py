@@ -168,5 +168,43 @@ class TestSaveRestore(unittest.TestCase):
         self.assertEqual((s.cursor_row, s.cursor_col), (2, 3))
 
 
+class TestAccessibilityObserver(unittest.TestCase):
+    def _collect(self):
+        events = []
+        return events, events.append
+
+    def test_title_emits_announcement(self):
+        s = blank()
+        seen, obs = self._collect()
+        apply_event(s, SetTitle("htop", 0), obs)
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(seen[0].kind, "title")
+        self.assertIn("htop", seen[0].text)
+
+    def test_full_clear_emits_announcement(self):
+        s = blank(rows=3, cols=5)
+        seen, obs = self._collect()
+        apply_event(s, ClearScreen(2, 0), obs)
+        self.assertEqual(seen[0].kind, "screen_cleared")
+
+    def test_partial_clear_is_silent(self):
+        s = blank(rows=3, cols=5)
+        seen, obs = self._collect()
+        apply_event(s, ClearScreen(0, 0), obs)  # cursor->end only
+        self.assertEqual(seen, [])
+
+    def test_printing_does_not_announce(self):
+        s = blank()
+        seen, obs = self._collect()
+        apply_event(s, PrintChar("a", Style(), 0), obs)
+        self.assertEqual(seen, [])
+
+    def test_observer_optional_still_mutates(self):
+        # No observer passed: behavior unchanged, title still recorded.
+        s = blank()
+        apply_event(s, SetTitle("x", 0))
+        self.assertEqual(s.title, "x")
+
+
 if __name__ == "__main__":
     unittest.main()

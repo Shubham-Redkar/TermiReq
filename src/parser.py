@@ -31,6 +31,9 @@ from .contracts import (
     ClearLine, ClearScreen, MoveCursor, ParserEvent, PrintChar, RestoreCursor,
     SaveCursor, SetStyle, SetTitle, Style, UnknownSequence,
 )
+from .logger import get_logger
+
+logger = get_logger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -114,14 +117,22 @@ class ANSIParser:
                 if char is not None:
                     yield PrintChar(char, self._current_style, i - 1)
                 else:
+                    logger.debug(
+                        "unknown UTF-8 sequence at byte %d", i - 1,
+                    )
                     yield UnknownSequence(data[i - 1:i], i - 1)
             else:                             # other control byte (e.g. BEL)
+                logger.debug(
+                    "unknown control byte 0x%02X at byte %d", b, i - 1,
+                )
                 i += 1
                 yield UnknownSequence(data[i - 1:i], i - 1)
 
     def parse(self, data: bytes) -> List[ParserEvent]:
         """Single-shot convenience: parse a whole stream into a list of events."""
-        return list(self.feed(data))
+        events = list(self.feed(data))
+        logger.debug("parsed %d bytes -> %d events", len(data), len(events))
+        return events
 
     # -- ESC / CSI handling ------------------------------------------------- #
 

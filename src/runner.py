@@ -18,11 +18,14 @@ from collections.abc import Generator
 from typing import Callable
 
 from src.contracts import CommandChunk, CommandFinished, RunnerEvent
+from src.logger import get_logger
 
 if sys.platform != "win32":
     import fcntl
     import struct
     import termios
+
+logger = get_logger(__name__)
 
 # Exit code used when a command is interrupted (Ctrl-C) or skipped.
 INTERRUPTED_EXIT_CODE = 130
@@ -51,6 +54,44 @@ def detect_terminal_geometry(
     rows = size.lines or fallback_rows
     cols = size.columns or fallback_cols
     return rows, cols
+
+
+def is_wsl() -> bool:
+    """Return True when running under the Windows Subsystem for Linux.
+
+    WSL presents as ``sys.platform == "linux"`` and *does* provide working
+    ``pty`` support, so no special fallback is needed there — unlike native
+    Windows. We detect it (via the ``WSL_*`` env vars set by the interop layer,
+    falling back to the ``microsoft`` marker in ``/proc/version``) so callers
+    can report the environment accurately and so we never reach for a
+    third-party shim like ``winpty`` (which would break the zero-dependency
+    guarantee) when the stdlib ``pty`` already works.
+    """
+    if sys.platform != "linux":
+        return False
+    if os.environ.get("WSL_DISTRO_NAME") or os.environ.get("WSL_INTEROP"):
+        return True
+    try:
+        with open("/proc/version", "r", encoding="utf-8", errors="ignore") as fh:
+            return "microsoft" in fh.read().lower()
+    except OSError:
+        return False
+
+
+def describe_platform() -> str:
+    """Human-readable summary of the terminal backend chosen for this platform.
+
+    Used for diagnostics/tests to make the OS-specific code path explicit:
+    native Windows uses the buffered ``subprocess`` fallback; everything else
+    (Linux, macOS, and WSL) uses a real ``pty``.
+    """
+    if sys.platform == "win32":
+        return "windows: subprocess fallback (no PTY)"
+    if is_wsl():
+        return "wsl: pty (stdlib)"
+    if pty_supported():
+        return "unix: pty (stdlib)"
+    return "unknown: subprocess fallback"
 
 
 def pty_supported() -> bool:
@@ -164,6 +205,10 @@ def _run_single_command_pty(
 
     try:
         output, exit_code, timed_out = _read_until_done(master_fd, proc, timeout)
+        logger.debug(
+            "pty cmd=%r output_bytes=%d exit_code=%s timed_out=%s",
+            command, len(output), exit_code, timed_out,
+        )
         yield CommandChunk(command=command, data=output, command_index=command_index)
         yield CommandFinished(
             command=command,
@@ -190,6 +235,9 @@ def _run_single_command_subprocess(
     cols: int = 80,
 ) -> Generator[RunnerEvent, None, None]:
     """Fallback when PTY is unavailable (e.g. Windows dev environments)."""
+    logger.debug(
+        "subprocess fallback cmd=%r timeout=%s", command, timeout,
+    )
     timed_out = False
     try:
         completed = subprocess.run(
@@ -246,6 +294,10 @@ def run_commands(
     single_runner = runner_fn or (
         _run_single_command_pty if use_real_pty else _run_single_command_subprocess
     )
+    logger.debug(
+        "run_commands count=%d use_pty=%s rows=%s cols=%s timeout=%s",
+        len(commands), use_real_pty, rows, cols, timeout,
+    )
 
     for index, command in enumerate(commands):
         try:
@@ -257,6 +309,9 @@ def run_commands(
                 cols=cols,
             )
         except KeyboardInterrupt:
+            logger.info(
+                "command interrupted cmd=%r (Ctrl-C skip)", command,
+            )
             yield CommandChunk(command=command, data=b"", command_index=index)
             yield CommandFinished(
                 command=command,

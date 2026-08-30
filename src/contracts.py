@@ -144,6 +144,28 @@ class DiffResult:
     scroll_amount: int = 0
 
 
+@dataclass(frozen=True)
+class AccessibilityAnnouncement:
+    """A semantic message destined for assistive technology.
+
+    This is the accessibility layer's unit of output: a short, human-meaningful
+    sentence describing something that changed on screen, plus enough metadata
+    for a backend to decide how (and how urgently) to convey it.
+
+    ``priority`` follows the ARIA live-region convention:
+        - ``"polite"``   -> speak when idle (most updates).
+        - ``"assertive"`` -> interrupt current speech (errors, bells).
+
+    ``kind`` is a stable, machine-readable category (e.g. ``"command_finished"``,
+    ``"title"``, ``"screen_cleared"``, ``"bell"``, ``"change_summary"``) so a
+    downstream tool can filter or route announcements without parsing ``text``.
+    """
+    text: str
+    kind: str = "info"
+    priority: str = "polite"
+    command: str | None = None
+
+
 @dataclass
 class CommandChunk:
     """A raw byte chunk emitted by a running subprocess or PTY."""
