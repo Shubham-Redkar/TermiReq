@@ -1,9 +1,11 @@
 """cli unit tests."""
 
-import unittest
-import sys
 import os
-from src.cli import create_parser, main
+import sys
+import unittest
+
+from src.cli import create_parser
+
 
 class TestCLI(unittest.TestCase):
     def setUp(self):
@@ -16,10 +18,14 @@ class TestCLI(unittest.TestCase):
 
     def test_missing_subcommand(self):
         with self.assertRaises(SystemExit):
-            with open(os.devnull, 'w') as f:
-                sys.stderr = f
-                self.parser.parse_args([])
-            sys.stderr = sys.__stderr__
+            with open(os.devnull, "w") as f:
+                original_stderr = sys.stderr
+                try:
+                    sys.stderr = f
+                    self.parser.parse_args([])
+                finally:
+                    sys.stderr = original_stderr
+
 
 if __name__ == "__main__":
     unittest.main()
