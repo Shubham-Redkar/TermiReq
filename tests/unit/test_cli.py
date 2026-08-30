@@ -2,6 +2,7 @@
 
 import unittest
 import sys
+import os
 from src.cli import create_parser, main
 
 class TestCLI(unittest.TestCase):
@@ -15,7 +16,7 @@ class TestCLI(unittest.TestCase):
 
     def test_missing_subcommand(self):
         with self.assertRaises(SystemExit):
-            with open('/dev/null', 'w') as f:
+            with open(os.devnull, 'w') as f:
                 sys.stderr = f
                 self.parser.parse_args([])
             sys.stderr = sys.__stderr__

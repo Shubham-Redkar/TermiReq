@@ -29,8 +29,9 @@ from typing import Iterator, List, Tuple
 
 from .contracts import (
     ClearLine, ClearScreen, MoveCursor, ParserEvent, PrintChar, RestoreCursor,
-    SaveCursor, SetStyle, Style, UnknownSequence,
+    SaveCursor, SetStyle, SetTitle, Style, UnknownSequence,
 )
+
 
 # --------------------------------------------------------------------------- #
 # SGR color tables (translate raw ANSI numbers to simple names)
@@ -135,12 +136,14 @@ class ANSIParser:
         c = data[i + 1]
         if c == 0x5B:               # '['  ->  CSI sequence
             return self._consume_csi(data, i)
+        if c == 0x5D:               # ']'  ->  OSC sequence
+            return self._consume_osc(data, i)
         if c == 0x37:               # '7'  ->  DECSC save cursor
             return i + 2, [SaveCursor(i)]
         if c == 0x38:               # '8'  ->  DECRC restore cursor
             return i + 2, [RestoreCursor(i)]
 
-        # Anything else is an unknown ESC form (incl. ESC] OSC, ESC(... charset).
+        # Anything else is an unknown ESC form (incl. ESC(... charset).
         # Consume bounded bytes (a parameter string) then emit UnknownSequence.
         end = i + 2
         limit = min(n, i + 1024)
@@ -155,6 +158,33 @@ class ANSIParser:
             else:
                 break
         return end, [UnknownSequence(data[start:end], start)]
+
+    def _consume_osc(self, data: bytes, i: int) -> Tuple[int, List[ParserEvent]]:
+        """Parse an OSC sequence: ESC ']' (string) (BEL|ST)."""
+        start = i
+        n = len(data)
+        j = i + 2  # skip "ESC ]"
+
+        # Find string terminator: BEL (0x07) or ESC \ (0x1B 0x5C)
+        payload = ""
+        while j < n:
+            if data[j] == 0x07:  # BEL
+                j += 1
+                break
+            if data[j] == 0x1B and j + 1 < n and data[j + 1] == 0x5C:  # ESC \
+                j += 2
+                break
+            payload += chr(data[j])
+            j += 1
+        else:
+            # Incomplete OSC
+            return n, [UnknownSequence(data[start:n], start)]
+
+        # Check for title codes (0;Title, 2;Title)
+        if payload.startswith(("0;", "2;")):
+            return j, [SetTitle(title=payload[2:], byte_offset=start)]
+        
+        return j, [UnknownSequence(data[start:j], start)]
 
     def _consume_csi(self, data: bytes, i: int) -> Tuple[int, List[ParserEvent]]:
         """Parse a CSI sequence: ESC '[' [private?] params? [intermediate?] final."""
