@@ -187,3 +187,58 @@ def diff_screens(before: ScreenState, after: ScreenState) -> DiffResult:
         cursor_moved=cursor_moved,
         new_cursor=new_cursor,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Human-readable formatting (git-style, ANSI-colored)
+# --------------------------------------------------------------------------- #
+
+# Raw ANSI color codes. Kept here (not in the CLI) so the diff layer owns the
+# full "render a DiffResult for a human" concern; the CLI just prints the
+# result and decides whether color is appropriate for the current output.
+_RED = "\x1b[31m"
+_GREEN = "\x1b[32m"
+_YELLOW = "\x1b[33m"
+_RESET = "\x1b[0m"
+
+
+def _colorize(text: str, code: str, enabled: bool) -> str:
+    """Wrap ``text`` in an ANSI ``code`` when coloring is enabled."""
+    return f"{code}{text}{_RESET}" if enabled else text
+
+
+def format_diff(diff: DiffResult, *, color: bool = True) -> str:
+    """Render a :class:`DiffResult` as a human-readable, git-style block.
+
+    Old cell contents are shown in red, new contents in green, and scroll
+    reports in yellow. Pass ``color=False`` to emit plain text — the CLI passes
+    this flag based on ``NO_COLOR`` and whether stdout is a real terminal, so
+    raw escape codes never leak into pipes or files.
+    """
+    lines: list[str] = []
+
+    if diff.scrolled:
+        lines.append(
+            _colorize(
+                f"  [Scrolled {diff.scroll_direction} by {diff.scroll_amount} lines]",
+                _YELLOW,
+                color,
+            )
+        )
+
+    if diff.cursor_moved:
+        lines.append(f"  [Cursor moved to {diff.new_cursor}]")
+
+    for change in diff.changes:
+        old_char = change.old.char if change.old.char != " " else "<space>"
+        new_char = change.new.char if change.new.char != " " else "<space>"
+        old_tok = _colorize(f"{old_char!r}", _RED, color)
+        new_tok = _colorize(f"{new_char!r}", _GREEN, color)
+        lines.append(
+            f"  Row {change.row:02} Col {change.col:02}: {old_tok} -> {new_tok}"
+        )
+
+    if not diff.changes and not diff.scrolled and not diff.cursor_moved:
+        lines.append("  [No changes detected]")
+
+    return "\n".join(lines)
