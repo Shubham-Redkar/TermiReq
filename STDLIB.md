@@ -54,9 +54,9 @@ Default PTY size is 80×24 (classic VT100). Pass `rows=` / `cols=` to `run_comma
 
 Commands are passed to `/bin/sh -c` (via `shell=True`). Shell metacharacters are interpreted. This matches the hackathon demo usage (`termireq run "ls --color"`) but is not a sandbox — only run trusted commands.
 
-### No alternate-screen / mouse / bracketed-paste
+### No mouse / bracketed-paste
 
-The runner captures raw bytes faithfully but the parser/screen layer explicitly does not model alternate-screen buffer, mouse tracking, or bracketed paste. Those bytes may appear as `UnknownSequence` events upstream.
+The runner captures raw bytes faithfully but the parser/screen layer explicitly does not model mouse tracking or bracketed paste. Those bytes may appear as `UnknownSequence` events upstream.
 
 ---
 
