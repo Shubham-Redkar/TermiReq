@@ -1,4 +1,4 @@
-"""Command line interface (T5/T6a/T7).
+"""Command line interface.
 
 This module provides the main entrypoint for the TermiReq CLI. It parses
 user arguments, orchestrates the PTY runner and parser, and formats the

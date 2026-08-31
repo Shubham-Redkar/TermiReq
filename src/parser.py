@@ -1,4 +1,4 @@
-"""ANSI/VT100 escape-sequence parser (T2 / T2b).
+"""ANSI/VT100 escape-sequence parser.
 
 Reads raw terminal bytes and turns them into a stream of structured
 :class:`~src.contracts.ParserEvent` objects, one at a time, in order.
@@ -20,7 +20,7 @@ and keeps going. It tracks a running byte offset for every event so error
 positions can be reported precisely.
 
 Track a running byte offset AND a line/col counter from character one — exactly
-the discipline the T0 contract warns is miserable to retrofit later.
+the discipline that is miserable to retrofit later.
 """
 
 from __future__ import annotations

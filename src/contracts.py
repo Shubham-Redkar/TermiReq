@@ -1,4 +1,4 @@
-"""Shared data contract (T0) for parser, screen, diff, and runner."""
+"""Shared data contract for parser, screen, diff, and runner."""
 
 from __future__ import annotations
 

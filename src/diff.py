@@ -1,4 +1,4 @@
-"""Diff engine (T4): cell-by-cell screen comparison with scroll detection."""
+"""Diff engine: cell-by-cell screen comparison with scroll detection."""
 
 from __future__ import annotations
 
@@ -210,7 +210,7 @@ def diff_screens_incremental(
 ) -> DiffResult:
     """Incremental fast-path diff over only the rows known to have changed.
 
-    This is the Task 3 optimization: a caller that tracked exactly which rows
+    This is a fast-path optimization: a caller that tracked exactly which rows
     it mutated (via :class:`src.screen.DirtyRows`) can skip the O(rows^2 * cols)
     scroll-detection scan and only re-compare the dirty rows —
     O(len(dirty_rows) * cols).

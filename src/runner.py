@@ -1,4 +1,4 @@
-"""PTY command runner (T1/T1b).
+"""PTY command runner.
 
 Spawns shell commands through a pseudo-terminal so programs emit full ANSI
 output instead of plain-text pipe mode. Runs commands strictly sequentially.

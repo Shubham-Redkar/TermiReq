@@ -1,8 +1,8 @@
-"""Virtual screen grid (T3).
+"""Virtual screen grid.
 
 Consumes parser events and maintains a 2D grid of cells, tracking the cursor
 position and per-cell character + style. Mutates the :class:`ScreenState` in
-place (per the T0 decision); call :meth:`ScreenState.snapshot` before any diff
+place; call :meth:`ScreenState.snapshot` before any diff
 comparison.
 
 Design decisions baked in (see docs/ttydiff-t0-contract.md):
