@@ -251,7 +251,7 @@ def _run_single_command_subprocess(
     except subprocess.TimeoutExpired as exc:
         timed_out = True
         output = (exc.stdout or b"") + (exc.stderr or b"")
-        exit_code = -1
+        exit_code = 124
 
     yield CommandChunk(command=command, data=output, command_index=command_index)
     yield CommandFinished(

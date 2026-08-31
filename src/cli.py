@@ -98,9 +98,8 @@ def create_parser() -> argparse.ArgumentParser:
         help="Run a command and record its raw byte stream to a file."
     )
     record_parser.add_argument(
-        "commands",
-        nargs="+",
-        help="One or more shell commands to execute"
+        "command",
+        help="A single shell command to execute and record"
     )
     record_parser.add_argument(
         "--output",
@@ -336,7 +335,7 @@ def main(args: List[str] | None = None) -> int:
     elif parsed_args.subcommand == "record":
         root_logger = configure_logging(verbose=parsed_args.verbose, debug=parsed_args.debug)
         detected_rows, detected_cols = detect_terminal_geometry()
-        runner_events = run_commands(parsed_args.commands, timeout=parsed_args.timeout, rows=detected_rows, cols=detected_cols)
+        runner_events = run_commands([parsed_args.command], timeout=parsed_args.timeout, rows=detected_rows, cols=detected_cols)
         
         with open(parsed_args.output, "wb") as f:
             for event in runner_events:
@@ -355,26 +354,43 @@ def main(args: List[str] | None = None) -> int:
         cols = config.terminal.cols or detected_cols
         use_color = resolve_color(config, no_color_flag=parsed_args.no_color)
         
-        with open(parsed_args.input, "rb") as f:
-            data = f.read()
+        adapter = get_adapter(config.accessibility)
+        observer = adapter.announce if adapter.available else None
+        verbosity = config.accessibility.verbosity
+        
+        try:
+            with open(parsed_args.input, "rb") as f:
+                data = f.read()
+                
+            current_state = create_empty_state(rows, cols)
+            before_state = current_state.snapshot()
+            ansi_parser = ANSIParser()
             
-        current_state = create_empty_state(rows, cols)
-        before_state = current_state.snapshot()
-        ansi_parser = ANSIParser()
-        
-        apply_events(current_state, ansi_parser.feed(data), observer=None)
-        
-        diff_result = diff_screens(before_state, current_state)
-        if parsed_args.json:
-            out_data = {
-                "command": f"replay {parsed_args.input}",
-                "exit_code": 0,
-                "diff": dataclasses.asdict(diff_result)
-            }
-            print(json.dumps(out_data, indent=2))
-        else:
-            print(f"--- Replay '{parsed_args.input}' finished ---")
-            print_diff(diff_result, color=use_color)
+            apply_events(current_state, ansi_parser.feed(data), observer=observer)
+            
+            diff_result = diff_screens(before_state, current_state)
+            if parsed_args.json:
+                out_data = {
+                    "command": f"replay {parsed_args.input}",
+                    "exit_code": 0,
+                    "diff": dataclasses.asdict(diff_result)
+                }
+                print(json.dumps(out_data, indent=2))
+            else:
+                print(f"--- Replay '{parsed_args.input}' finished ---")
+                print_diff(diff_result, color=use_color)
+                
+            if adapter.available:
+                adapter.announce_all(
+                    summarize_diff(
+                        f"replay {parsed_args.input}",
+                        0,
+                        diff_result,
+                        verbosity=verbosity,
+                    )
+                )
+        finally:
+            adapter.close()
             
         return 0
 
