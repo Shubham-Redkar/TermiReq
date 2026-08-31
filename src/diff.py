@@ -106,6 +106,11 @@ def _compare_cells(
     for r in rows:
         if r >= max_r:
             continue
+        
+        # Fast-path optimization: if we are comparing the entire row and it hasn't changed, skip it.
+        if col_range is None and before.grid[r] == after.grid[r]:
+            continue
+            
         for c in cols:
             if c >= max_c:
                 continue

@@ -44,6 +44,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="One or more shell commands to execute"
     )
     run_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Maximum time in seconds to wait for a command to finish"
+    )
+    run_parser.add_argument(
         "--json",
         action="store_true",
         help="Output diff as machine-readable JSON"
@@ -82,6 +88,75 @@ def create_parser() -> argparse.ArgumentParser:
         help="Log pipeline steps to stderr at INFO level"
     )
     run_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Log per-event detail to stderr at DEBUG level (implies verbose)"
+    )
+
+    record_parser = subparsers.add_parser(
+        "record",
+        help="Run a command and record its raw byte stream to a file."
+    )
+    record_parser.add_argument(
+        "commands",
+        nargs="+",
+        help="One or more shell commands to execute"
+    )
+    record_parser.add_argument(
+        "--output",
+        "-o",
+        required=True,
+        help="Path to the binary file where the session will be recorded"
+    )
+    record_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Maximum time in seconds to wait for a command to finish"
+    )
+    record_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Log pipeline steps to stderr at INFO level"
+    )
+    record_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Log per-event detail to stderr at DEBUG level (implies verbose)"
+    )
+
+    replay_parser = subparsers.add_parser(
+        "replay",
+        help="Replay a recorded terminal byte stream from a file and calculate the diff."
+    )
+    replay_parser.add_argument(
+        "input",
+        help="Path to the recorded binary session file"
+    )
+    replay_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output diff as machine-readable JSON"
+    )
+    replay_parser.add_argument(
+        "--config",
+        metavar="PATH",
+        default=None,
+        help="Path to a config.toml (overrides the search path)"
+    )
+    replay_parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable ANSI color in the diff output"
+    )
+    replay_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Log pipeline steps to stderr at INFO level"
+    )
+    replay_parser.add_argument(
         "--debug",
         action="store_true",
         help="Log per-event detail to stderr at DEBUG level (implies verbose)"
@@ -195,7 +270,7 @@ def main(args: List[str] | None = None) -> int:
             "active" if observer is not None else "inactive",
         )
 
-        runner_events = run_commands(parsed_args.commands, rows=rows, cols=cols)
+        runner_events = run_commands(parsed_args.commands, timeout=parsed_args.timeout, rows=rows, cols=cols)
 
         current_state = create_empty_state(rows, cols)
         before_state = current_state.snapshot()
@@ -256,6 +331,51 @@ def main(args: List[str] | None = None) -> int:
         finally:
             adapter.close()
 
+        return 0
+
+    elif parsed_args.subcommand == "record":
+        root_logger = configure_logging(verbose=parsed_args.verbose, debug=parsed_args.debug)
+        detected_rows, detected_cols = detect_terminal_geometry()
+        runner_events = run_commands(parsed_args.commands, timeout=parsed_args.timeout, rows=detected_rows, cols=detected_cols)
+        
+        with open(parsed_args.output, "wb") as f:
+            for event in runner_events:
+                if isinstance(event, CommandChunk):
+                    f.write(event.data)
+                elif isinstance(event, CommandFinished):
+                    print(f"--- Command '{event.command}' recorded (exit code {event.exit_code}) ---")
+        return 0
+
+    elif parsed_args.subcommand == "replay":
+        root_logger = configure_logging(verbose=parsed_args.verbose, debug=parsed_args.debug)
+        config = build_config(parsed_args)
+        
+        detected_rows, detected_cols = detect_terminal_geometry()
+        rows = config.terminal.rows or detected_rows
+        cols = config.terminal.cols or detected_cols
+        use_color = resolve_color(config, no_color_flag=parsed_args.no_color)
+        
+        with open(parsed_args.input, "rb") as f:
+            data = f.read()
+            
+        current_state = create_empty_state(rows, cols)
+        before_state = current_state.snapshot()
+        ansi_parser = ANSIParser()
+        
+        apply_events(current_state, ansi_parser.feed(data), observer=None)
+        
+        diff_result = diff_screens(before_state, current_state)
+        if parsed_args.json:
+            out_data = {
+                "command": f"replay {parsed_args.input}",
+                "exit_code": 0,
+                "diff": dataclasses.asdict(diff_result)
+            }
+            print(json.dumps(out_data, indent=2))
+        else:
+            print(f"--- Replay '{parsed_args.input}' finished ---")
+            print_diff(diff_result, color=use_color)
+            
         return 0
 
     return 1
