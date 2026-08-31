@@ -6,3 +6,12 @@ venv/
 dist/
 build/
 *.egg-info/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+
+# TermiReq specific
+*.bin
+session.bin
