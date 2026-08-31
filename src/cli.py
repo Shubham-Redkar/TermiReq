@@ -3,6 +3,11 @@
 This module provides the main entrypoint for the TermiReq CLI. It parses
 user arguments, orchestrates the PTY runner and parser, and formats the
 output (either as human-readable text or machine-readable JSON).
+
+The CLI supports three core flows:
+1. `run`: Execute live shell commands, rendering and diffing their output sequentially.
+2. `record`: Run a command and dump its raw PTY byte stream straight to a binary file.
+3. `replay`: Read a recorded session, parse the bytes, and output the visual diff.
 """
 
 import argparse
@@ -221,7 +226,14 @@ def print_diff(diff_result: DiffResult, *, color: bool = True) -> None:
     print(format_diff(diff_result, color=color))
 
 def main(args: List[str] | None = None) -> int:
-    """Main CLI execution flow."""
+    """Main CLI execution flow.
+    
+    This function acts as the central controller for the application. It routes
+    execution based on the chosen subcommand (`run`, `record`, or `replay`).
+    It orchestrates the terminal size detection, instantiates the accessibility
+    adapters, reads from the runner or binary files, and funnels bytes into the
+    ANSIParser and ScreenState to calculate final visual diffs.
+    """
     parser = create_parser()
     parsed_args = parser.parse_args(args)
 
