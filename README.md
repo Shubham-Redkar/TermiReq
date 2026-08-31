@@ -19,29 +19,32 @@ It reads the raw byte stream a terminal program emits (including ANSI/VT100 esca
 
 ## Usage
 
+### 1. Basic Semantic Diffing
+Run one or more commands sequentially to see the exact structural changes they make to the screen.
 ```bash
-# Run multiple commands sequentially and diff their output
 ./termireq run "ls -la" "htop" "git status"
 ```
 
+### 2. Accessibility Testing (Text-to-Speech)
+Turn visual UI changes into spoken announcements using your OS's native speech synthesizer. Perfect for testing TUI accessibility without relying on screen readers.
 ```bash
-# Disable color, or emit accessibility announcements
-./termireq run "ls -la" --no-color
-./termireq run "make" --accessibility            # auto-selects a backend
-./termireq run "make" --speak                    # read the diff out loud
-./termireq run "ls" --a11y-backend stream        # write announcements to a stream
-./termireq run "ls" --config ./config.toml       # explicit config file
+./termireq run "make" --speak
+./termireq run "ls" --a11y-backend stream        # Write announcements to stdout
 ```
 
+### 3. Session Record & Replay
+Capture a raw terminal session to a binary file (including all hidden ANSI codes) and perfectly replay it later for debugging or automated UI testing.
 ```bash
-# Record a session to a binary file and replay it later
 ./termireq record -o session.bin "htop"
 ./termireq replay session.bin --speak
 ```
 
+### 4. Advanced Controls
+Configure timeouts to prevent hanging PTY subprocesses, disable ANSI color output, or use a custom configuration file.
 ```bash
-# Set a timeout (in seconds) to prevent commands from hanging
-./termireq run --timeout 5.5 "sleep 10"
+./termireq run --timeout 5.5 "sleep 10"          # Set a timeout in seconds
+./termireq run "ls -la" --no-color               # Disable colorized diff output
+./termireq run "ls" --config ./config.toml       # Override default configuration
 ```
 
 Configuration is layered: a `config.toml` (see `configs/config.toml` for the schema) is overlaid by `TERMIREQ_*` environment variables (e.g. `TERMIREQ_THEME`, `TERMIREQ_ROWS`, `NO_COLOR`), which are in turn overridden by CLI flags.
