@@ -1,9 +1,9 @@
-# TermiReq / ttydiff — sample configuration
+# TermiReq / termireq — sample configuration
 #
-# Copy this to ./config.toml (project root), ./ttydiff.toml, or
-# ~/.config/ttydiff/config.toml, or point at it with `--config PATH`.
+# Copy this to ./config.toml (project root), ./termireq.toml, or
+# ~/.config/termireq/config.toml, or point at it with `--config PATH`.
 # Every value is optional; omitted keys keep their built-in default.
-# Environment variables (TTYDIFF_*, NO_COLOR) override anything set here.
+# Environment variables (TERMIREQ_*, NO_COLOR) override anything set here.
 
 [terminal]
 # Virtual screen / PTY geometry. Comment out to auto-detect the real terminal.
@@ -27,6 +27,6 @@ enabled = false
 #   null   -> discard (no output)
 backend = "auto"
 # speech_rate = 175
-# stream_path = "/tmp/ttydiff-a11y.log"
+# stream_path = "/tmp/termireq-a11y.log"
 # verbosity: summary | detailed
 verbosity = "summary"

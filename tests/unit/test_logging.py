@@ -13,11 +13,11 @@ from src.logger import configure_logging, get_logger, _resolve_level
 
 
 class TestGetLogger(unittest.TestCase):
-    def test_namespaced_under_ttydiff(self) -> None:
-        self.assertEqual(get_logger("parser").name, "ttydiff.parser")
+    def test_namespaced_under_termireq(self) -> None:
+        self.assertEqual(get_logger("parser").name, "termireq.parser")
 
     def test_src_modules_stay_namespaced(self) -> None:
-        self.assertEqual(get_logger("src.diff").name, "ttydiff.src.diff")
+        self.assertEqual(get_logger("src.diff").name, "termireq.src.diff")
 
 
 class TestResolveLevel(unittest.TestCase):
@@ -83,16 +83,16 @@ class TestCLILoggingFlags(unittest.TestCase):
         self.assertIn("finished", buf.getvalue())
 
     def test_env_log_level_respected_by_main(self) -> None:
-        old = os.environ.get("TTYDIFF_LOG_LEVEL")
-        os.environ["TTYDIFF_LOG_LEVEL"] = "debug"
+        old = os.environ.get("TERMIREQ_LOG_LEVEL")
+        os.environ["TERMIREQ_LOG_LEVEL"] = "debug"
         try:
             root = configure_logging()
             self.assertEqual(root.level, logging.DEBUG)
         finally:
             if old is None:
-                os.environ.pop("TTYDIFF_LOG_LEVEL", None)
+                os.environ.pop("TERMIREQ_LOG_LEVEL", None)
             else:
-                os.environ["TTYDIFF_LOG_LEVEL"] = old
+                os.environ["TERMIREQ_LOG_LEVEL"] = old
 
 
 if __name__ == "__main__":

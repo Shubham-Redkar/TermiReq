@@ -93,7 +93,7 @@ class TestSpeechAdapter(unittest.TestCase):
         cmd, env = adapter.build_command("changed 3 cells")
         self.assertEqual(cmd[0], "powershell")
         self.assertIn("System.Speech", cmd[-1])
-        self.assertEqual(env["TTYDIFF_TEXT"], "changed 3 cells")
+        self.assertEqual(env["TERMIREQ_TEXT"], "changed 3 cells")
 
     def test_unknown_platform_yields_no_command(self) -> None:
         adapter = SpeechAdapter(system="Plan9")

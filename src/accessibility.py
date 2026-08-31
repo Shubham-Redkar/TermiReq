@@ -212,14 +212,14 @@ class SpeechAdapter(AccessibilityAdapter):
             script = (
                 "Add-Type -AssemblyName System.Speech;"
                 "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
-                "if ($env:TTYDIFF_RATE) { $s.Rate = [int]$env:TTYDIFF_RATE };"
-                "$s.Speak($env:TTYDIFF_TEXT)"
+                "if ($env:TERMIREQ_RATE) { $s.Rate = [int]$env:TERMIREQ_RATE };"
+                "$s.Speak($env:TERMIREQ_TEXT)"
             )
             env = dict(os.environ)
-            env["TTYDIFF_TEXT"] = text
+            env["TERMIREQ_TEXT"] = text
             if self._rate is not None:
                 # SAPI rate is -10..10; map a WPM-ish value into that band.
-                env["TTYDIFF_RATE"] = str(_clamp((self._rate - 175) // 15, -10, 10))
+                env["TERMIREQ_RATE"] = str(_clamp((self._rate - 175) // 15, -10, 10))
             return [(["powershell", "-NoProfile", "-Command", script], env)]
 
         return []

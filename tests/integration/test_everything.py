@@ -167,7 +167,7 @@ class TestConfigFeature(unittest.TestCase):
     def test_env_overrides_file(self) -> None:
         cfg = load_config(
             self._tmp.name,
-            env={"TTYDIFF_ROWS": "50", "TTYDIFF_COLOR": "yes"},
+            env={"TERMIREQ_ROWS": "50", "TERMIREQ_COLOR": "yes"},
         )
         self.assertEqual(cfg.terminal.rows, 50)   # env wins
         self.assertTrue(cfg.color.enabled)

@@ -93,7 +93,7 @@ class TestFileLoading(unittest.TestCase):
 class TestEnvOverrides(unittest.TestCase):
     def test_env_overrides_file(self) -> None:
         cfg = load_config(
-            env={"TTYDIFF_ROWS": "50", "TTYDIFF_COLS": "100"}
+            env={"TERMIREQ_ROWS": "50", "TERMIREQ_COLS": "100"}
         )
         self.assertEqual(cfg.terminal.rows, 50)
         self.assertEqual(cfg.terminal.cols, 100)
@@ -102,20 +102,20 @@ class TestEnvOverrides(unittest.TestCase):
         cfg = load_config(env={"NO_COLOR": "1"})
         self.assertFalse(cfg.color.enabled)
 
-    def test_ttydiff_color_toggle(self) -> None:
-        self.assertTrue(load_config(env={"TTYDIFF_COLOR": "yes"}).color.enabled)
-        self.assertFalse(load_config(env={"TTYDIFF_COLOR": "0"}).color.enabled)
+    def test_termireq_color_toggle(self) -> None:
+        self.assertTrue(load_config(env={"TERMIREQ_COLOR": "yes"}).color.enabled)
+        self.assertFalse(load_config(env={"TERMIREQ_COLOR": "0"}).color.enabled)
 
     def test_theme_env(self) -> None:
-        cfg = load_config(env={"TTYDIFF_THEME": "dracula"})
+        cfg = load_config(env={"TERMIREQ_THEME": "dracula"})
         self.assertEqual(cfg.color.theme, "dracula")
 
     def test_accessibility_env(self) -> None:
         cfg = load_config(
             env={
-                "TTYDIFF_ACCESSIBILITY": "on",
-                "TTYDIFF_A11Y_BACKEND": "speech",
-                "TTYDIFF_SPEECH_RATE": "150",
+                "TERMIREQ_ACCESSIBILITY": "on",
+                "TERMIREQ_A11Y_BACKEND": "speech",
+                "TERMIREQ_SPEECH_RATE": "150",
             }
         )
         self.assertTrue(cfg.accessibility.enabled)
@@ -123,18 +123,18 @@ class TestEnvOverrides(unittest.TestCase):
         self.assertEqual(cfg.accessibility.speech_rate, 150)
 
     def test_bad_int_env_becomes_none(self) -> None:
-        cfg = load_config(env={"TTYDIFF_ROWS": "notanumber"})
+        cfg = load_config(env={"TERMIREQ_ROWS": "notanumber"})
         self.assertIsNone(cfg.terminal.rows)
 
 
 class TestCandidatePaths(unittest.TestCase):
     def test_explicit_env_path_is_first(self) -> None:
-        paths = candidate_paths(env={"TTYDIFF_CONFIG": "/etc/ttydiff.toml"})
-        self.assertEqual(paths[0], Path("/etc/ttydiff.toml"))
+        paths = candidate_paths(env={"TERMIREQ_CONFIG": "/etc/termireq.toml"})
+        self.assertEqual(paths[0], Path("/etc/termireq.toml"))
 
     def test_xdg_config_home_respected(self) -> None:
         paths = candidate_paths(env={"XDG_CONFIG_HOME": "/xdg"})
-        self.assertIn(Path("/xdg/ttydiff/config.toml"), paths)
+        self.assertIn(Path("/xdg/termireq/config.toml"), paths)
 
 
 if __name__ == "__main__":

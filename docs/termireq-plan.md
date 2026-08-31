@@ -1,4 +1,4 @@
-# ttydiff — Execution Plan
+# termireq — Execution Plan
 **Zero Dependency Hackathon · Track B (Parsers & Data Formats)**
 Team: Siddhesh · Sarvesh · Shubham (Lead)
 Language: Python (stdlib only)
@@ -83,9 +83,9 @@ raw bytes → [1] ANSI Parser → [2] Virtual Screen State → [3] Diff Engine �
 
 **CLI surface:**
 ```
-ttydiff run "ls -la" "htop" "git status"
-ttydiff run --file commands.txt
-ttydiff replay session.log        # replay a captured raw byte log for testing/demo
+termireq run "ls -la" "htop" "git status"
+termireq run --file commands.txt
+termireq replay session.log        # replay a captured raw byte log for testing/demo
 ```
 - Argument parsing via `argparse`
 - Clean exit codes, stdout/stderr separation
@@ -102,7 +102,7 @@ ttydiff replay session.log        # replay a captured raw byte log for testing/d
 - `Makefile` / one-command build
 - `deps-proof.txt` — proof of zero third-party deps
 - `.zero-dep.toml` — track letter (B), one-line pitch
-- 5-minute demo video: show `ttydiff run` chaining real commands, show the diff output, show the empty manifest
+- 5-minute demo video: show `termireq run` chaining real commands, show the diff output, show the empty manifest
 
 ---
 
@@ -148,7 +148,7 @@ ttydiff replay session.log        # replay a captured raw byte log for testing/d
 
 **Afternoon — First integration checkpoint (all three):**
 - Plug Siddhesh's parser+screen into Sarvesh's runner+diff, driven by Shubham's CLI
-- Run one real command end-to-end: `ttydiff run "ls --color"` → should produce a real diff report
+- Run one real command end-to-end: `termireq run "ls --color"` → should produce a real diff report
 - **This is the most important moment in the whole plan.** Fix interface mismatches now, not on Day 3.
 
 **Evening:**
@@ -167,7 +167,7 @@ ttydiff replay session.log        # replay a captured raw byte log for testing/d
 
 **Afternoon:**
 - All three: full run-through of the tool live, exactly as a judge would run it — one command builds/runs it, manifest is empty, demo scenario works
-- Record the 5-minute demo video: show `ttydiff run` chaining 3–4 real commands (pick visually distinct ones — `ls --color`, something with cursor movement, something with scrolling output), show the diff output per command, show the empty dependency manifest and `deps-proof.txt`
+- Record the 5-minute demo video: show `termireq run` chaining 3–4 real commands (pick visually distinct ones — `ls --color`, something with cursor movement, something with scrolling output), show the diff output per command, show the empty dependency manifest and `deps-proof.txt`
 - If doing the optional audio flourish: demo it clearly labeled as optional/disclosed, degrading gracefully if `say`/`espeak` isn't present — never implied as part of the graded core
 
 **Before submission:**

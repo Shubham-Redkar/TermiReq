@@ -1,4 +1,4 @@
-# ttydiff — Task Breakdown & Dependencies (2-Day Plan)
+# termireq — Task Breakdown & Dependencies (2-Day Plan)
 
 **How to read this:** every task has an ID, an owner, what it needs to already exist (**Depends On**), and what can't start until it's done (**Blocks**). Work down each person's lane in order — don't jump ahead of a dependency, and don't let a "blocks everyone" task slip.
 

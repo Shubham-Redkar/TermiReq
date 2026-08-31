@@ -1,4 +1,4 @@
-# ttydiff — Problem Statement
+# termireq — Problem Statement
 
 **Track:** B — Parsers & Data Formats
 **Team:** Siddhesh, Sarvesh, Shubham (Lead)
@@ -18,7 +18,7 @@ This matters for things like screen readers (for visually impaired users), termi
 
 ## What We're Building
 
-**ttydiff** — a tool that:
+**termireq** — a tool that:
 1. Reads raw terminal output (including the hidden escape codes)
 2. Builds a virtual model of what's on screen
 3. Compares two moments in time and reports **only what changed**
@@ -26,9 +26,9 @@ This matters for things like screen readers (for visually impaired users), termi
 
 Example usage:
 ```
-ttydiff run "ls -la" "htop" "git status"
+termireq run "ls -la" "htop" "git status"
 ```
-Each command runs, ttydiff watches the screen, and prints what changed.
+Each command runs, termireq watches the screen, and prints what changed.
 
 ## Why This Fits the Hackathon
 
@@ -66,4 +66,4 @@ Parse the hidden codes  →  Build a virtual screen  →  Compare old vs new  �
 - **Day 3:** Polish, test, write docs, record demo, submit
 
 ---
-*Full detailed plan with hour-by-hour breakdown: see `ttydiff-plan.md`*
+*Full detailed plan with hour-by-hour breakdown: see `termireq-plan.md`*

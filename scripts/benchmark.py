@@ -1,4 +1,4 @@
-"""Micro-benchmarks for the ttydiff pipeline (Task 3).
+"""Micro-benchmarks for the termireq pipeline (Task 3).
 
 Runnable with the standard library only:
 
@@ -100,7 +100,7 @@ def bench_parser(size_kb: int = 256, iterations: int = 20) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="ttydiff benchmarks")
+    ap = argparse.ArgumentParser(description="termireq benchmarks")
     ap.add_argument("--profile", action="store_true", help="cProfile the full diff")
     args = ap.parse_args(argv)
 
@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     print("=" * 60)
-    print("ttydiff benchmarks (stdlib only)")
+    print("termireq benchmarks (stdlib only)")
     print("=" * 60)
     bench_diff()
     bench_parser()

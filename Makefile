@@ -1,4 +1,4 @@
-# ttydiff — Makefile (one-command build/run)
+# termireq — Makefile (one-command build/run)
 
 PYTHON ?= python
 

@@ -10,9 +10,9 @@ STDLIB.md).
 Precedence (lowest to highest):
     1. Built-in defaults (:func:`default_config`).
     2. Values from the first ``config.toml`` found on the search path.
-    3. Environment variable overrides (``TTYDIFF_*`` and ``NO_COLOR``).
+    3. Environment variable overrides (``TERMIREQ_*`` and ``NO_COLOR``).
 
-An explicit path (from ``--config`` / ``$TTYDIFF_CONFIG``) always wins the
+An explicit path (from ``--config`` / ``$TERMIREQ_CONFIG``) always wins the
 search and, if it does not exist, raises ``FileNotFoundError`` so typos are not
 silently ignored.
 """
@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 
 
 # Config file names looked for in the current working directory.
-_LOCAL_NAMES = ("config.toml", "ttydiff.toml")
+_LOCAL_NAMES = ("config.toml", "termireq.toml")
 
 
 @dataclass
@@ -91,13 +91,13 @@ def _as_int(value: object) -> int | None:
 def candidate_paths(env: Mapping[str, str] | None = None) -> list[Path]:
     """Return the config file locations to try, in priority order.
 
-    Order: an explicit ``$TTYDIFF_CONFIG`` first, then ``./config.toml`` /
-    ``./ttydiff.toml``, then the XDG user config location.
+    Order: an explicit ``$TERMIREQ_CONFIG`` first, then ``./config.toml`` /
+    ``./termireq.toml``, then the XDG user config location.
     """
     env = os.environ if env is None else env
     paths: list[Path] = []
 
-    explicit = env.get("TTYDIFF_CONFIG")
+    explicit = env.get("TERMIREQ_CONFIG")
     if explicit:
         paths.append(Path(explicit))
 
@@ -106,7 +106,7 @@ def candidate_paths(env: Mapping[str, str] | None = None) -> list[Path]:
 
     xdg = env.get("XDG_CONFIG_HOME")
     base = Path(xdg) if xdg else Path.home() / ".config"
-    paths.append(base / "ttydiff" / "config.toml")
+    paths.append(base / "termireq" / "config.toml")
 
     return paths
 
@@ -169,28 +169,28 @@ def _merge_file(config: Config, data: dict) -> None:
 
 
 def _apply_env(config: Config, env: Mapping[str, str]) -> None:
-    """Layer ``TTYDIFF_*`` (and ``NO_COLOR``) overrides onto ``config``."""
-    if "TTYDIFF_ROWS" in env:
-        config.terminal.rows = _as_int(env["TTYDIFF_ROWS"])
-    if "TTYDIFF_COLS" in env:
-        config.terminal.cols = _as_int(env["TTYDIFF_COLS"])
+    """Layer ``TERMIREQ_*`` (and ``NO_COLOR``) overrides onto ``config``."""
+    if "TERMIREQ_ROWS" in env:
+        config.terminal.rows = _as_int(env["TERMIREQ_ROWS"])
+    if "TERMIREQ_COLS" in env:
+        config.terminal.cols = _as_int(env["TERMIREQ_COLS"])
 
     # NO_COLOR (https://no-color.org) forces color off regardless of value.
     if env.get("NO_COLOR"):
         config.color.enabled = False
-    if "TTYDIFF_COLOR" in env:
-        config.color.enabled = _truthy(env["TTYDIFF_COLOR"])
-    if env.get("TTYDIFF_THEME"):
-        config.color.theme = env["TTYDIFF_THEME"]
+    if "TERMIREQ_COLOR" in env:
+        config.color.enabled = _truthy(env["TERMIREQ_COLOR"])
+    if env.get("TERMIREQ_THEME"):
+        config.color.theme = env["TERMIREQ_THEME"]
 
-    if "TTYDIFF_ACCESSIBILITY" in env:
-        config.accessibility.enabled = _truthy(env["TTYDIFF_ACCESSIBILITY"])
-    if env.get("TTYDIFF_A11Y_BACKEND"):
-        config.accessibility.backend = env["TTYDIFF_A11Y_BACKEND"]
-    if "TTYDIFF_SPEECH_RATE" in env:
-        config.accessibility.speech_rate = _as_int(env["TTYDIFF_SPEECH_RATE"])
-    if env.get("TTYDIFF_A11Y_STREAM"):
-        config.accessibility.stream_path = env["TTYDIFF_A11Y_STREAM"]
+    if "TERMIREQ_ACCESSIBILITY" in env:
+        config.accessibility.enabled = _truthy(env["TERMIREQ_ACCESSIBILITY"])
+    if env.get("TERMIREQ_A11Y_BACKEND"):
+        config.accessibility.backend = env["TERMIREQ_A11Y_BACKEND"]
+    if "TERMIREQ_SPEECH_RATE" in env:
+        config.accessibility.speech_rate = _as_int(env["TERMIREQ_SPEECH_RATE"])
+    if env.get("TERMIREQ_A11Y_STREAM"):
+        config.accessibility.stream_path = env["TERMIREQ_A11Y_STREAM"]
 
 
 def load_config(

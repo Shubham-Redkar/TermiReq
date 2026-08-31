@@ -52,7 +52,7 @@ Default PTY size is 80×24 (classic VT100). Pass `rows=` / `cols=` to `run_comma
 
 ### Shell interpretation
 
-Commands are passed to `/bin/sh -c` (via `shell=True`). Shell metacharacters are interpreted. This matches the hackathon demo usage (`ttydiff run "ls --color"`) but is not a sandbox — only run trusted commands.
+Commands are passed to `/bin/sh -c` (via `shell=True`). Shell metacharacters are interpreted. This matches the hackathon demo usage (`termireq run "ls --color"`) but is not a sandbox — only run trusted commands.
 
 ### No alternate-screen / mouse / bracketed-paste
 
@@ -78,9 +78,9 @@ For repeated diffs against the same geometry, `diff_screens_incremental(before, 
 | Normally you'd install | Instead | Why |
 |---|---|---|
 | `tomli` / `toml` / `pyyaml` | `tomllib` (stdlib, 3.11+) | Native TOML parsing; falls back to env-var-only config when unavailable |
-| `pydantic` / `dynaconf` (config schema + env layering) | Plain dataclasses + a hand-written env-override pass | Typed config sections and `TTYDIFF_*` overrides without a settings framework |
+| `pydantic` / `dynaconf` (config schema + env layering) | Plain dataclasses + a hand-written env-override pass | Typed config sections and `TERMIREQ_*` overrides without a settings framework |
 
-Config resolves in layers: a TOML file (explicit `--config`, then `./config.toml`, `./ttydiff.toml`, then `$XDG_CONFIG_HOME`/`~/.config/ttydiff/config.toml`) overlaid by `TTYDIFF_*` environment variables (plus the `NO_COLOR` convention). Unknown keys are ignored so newer sample configs stay backward-compatible.
+Config resolves in layers: a TOML file (explicit `--config`, then `./config.toml`, `./termireq.toml`, then `$XDG_CONFIG_HOME`/`~/.config/termireq/config.toml`) overlaid by `TERMIREQ_*` environment variables (plus the `NO_COLOR` convention). Unknown keys are ignored so newer sample configs stay backward-compatible.
 
 ## Accessibility (`accessibility.py`)
 
@@ -89,4 +89,4 @@ Config resolves in layers: a TOML file (explicit `--config`, then `./config.toml
 | `comtypes` / `pyobjc` / `pyatspi` | OS speech services via `subprocess` | See the top table — native API bindings are C extensions |
 | `pyttsx3` / `gTTS` | `say` / `spd-say` / `espeak` / PowerShell SAPI | Zero-dep, offline audio path |
 
-The adapter layer (`NullAdapter` / `StreamAdapter` / `SpeechAdapter`, selected by `get_adapter`) turns diff results into `AccessibilityAnnouncement`s. Announcement priority follows the ARIA live-region convention (`polite` for success, `assertive` for failures). Windows TTS text is passed via the `TTYDIFF_TEXT` env var rather than interpolated into the command line, avoiding shell injection.
+The adapter layer (`NullAdapter` / `StreamAdapter` / `SpeechAdapter`, selected by `get_adapter`) turns diff results into `AccessibilityAnnouncement`s. Announcement priority follows the ARIA live-region convention (`polite` for success, `assertive` for failures). Windows TTS text is passed via the `TERMIREQ_TEXT` env var rather than interpolated into the command line, avoiding shell injection.

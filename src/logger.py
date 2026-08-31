@@ -12,7 +12,7 @@ Verbosity levels (lowest to highest):
                          parser or diff issues.
 
 Any module can grab a logger with :func:`get_logger`; it is pre-named
-``ttydiff.<module>`` so log lines carry the source module for free.
+``termireq.<module>`` so log lines carry the source module for free.
 
 Log handler follows the *current* ``sys.stderr`` on every emit, so when a
 caller wraps a run in :func:`contextlib.redirect_stderr` the log lines land in
@@ -26,7 +26,7 @@ import os
 import sys
 from typing import Optional
 
-#: Valid level names accepted by ``--log-level`` / ``TTYDIFF_LOG_LEVEL``.
+#: Valid level names accepted by ``--log-level`` / ``TERMIREQ_LOG_LEVEL``.
 _LEVELS = {
     "debug": logging.DEBUG,
     "info": logging.INFO,
@@ -60,12 +60,12 @@ class _CurrentStderrHandler(logging.Handler):
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a module logger named ``ttydiff.<name>``.
+    """Return a module logger named ``termireq.<name>``.
 
     Namespace is local to this project so third-party log noise never mixes
-    in; each module passes its ``__name__`` and gets ``ttydiff.src.parser`` etc.
+    in; each module passes its ``__name__`` and gets ``termireq.src.parser`` etc.
     """
-    prefix = "ttydiff"
+    prefix = "termireq"
     if name == prefix or name.startswith(prefix + "."):
         full = name
     else:
@@ -76,7 +76,7 @@ def get_logger(name: str) -> logging.Logger:
 def _resolve_level(verbose: bool, debug: bool, env_level: Optional[str]) -> int:
     """Combine CLI flags and env override into a logging level int.
 
-    Precedence: ``--debug`` > ``--verbose`` > ``TTYDIFF_LOG_LEVEL`` env >
+    Precedence: ``--debug`` > ``--verbose`` > ``TERMIREQ_LOG_LEVEL`` env >
     default WARNING. An unrecognized env value falls back to WARNING rather
     than crashing the tool.
     """
@@ -94,13 +94,13 @@ def configure_logging(
     verbose: bool = False,
     debug: bool = False,
 ) -> logging.Logger:
-    """Install the root ``ttydiff`` logger and return it.
+    """Install the root ``termireq`` logger and return it.
 
     Idempotent: reconfiguring just adjusts the level, it never stacks
     duplicate handlers. Safe to call from tests repeatedly.
     """
-    root = logging.getLogger("ttydiff")
-    root.setLevel(_resolve_level(verbose, debug, os.environ.get("TTYDIFF_LOG_LEVEL")))
+    root = logging.getLogger("termireq")
+    root.setLevel(_resolve_level(verbose, debug, os.environ.get("TERMIREQ_LOG_LEVEL")))
 
     global _configured
     if not _configured:

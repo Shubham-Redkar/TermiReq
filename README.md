@@ -14,7 +14,7 @@ It reads the raw byte stream a terminal program emits (including ANSI/VT100 esca
 - **Accessibility Announcements:** Turns each diff into spoken/streamed announcements through the OS speech service (`say`/`spd-say`/`espeak`/PowerShell SAPI) — no third-party TTS package.
 - **Session Record & Replay:** Record raw terminal byte streams to binary files, and perfectly replay them later for debugging and automated UI testing.
 - **Command Timeouts:** Built-in safeguards (`--timeout`) to prevent hanging PTY subprocesses.
-- **Configuration File:** Optional `config.toml` (terminal geometry, color, accessibility) with `TTYDIFF_*` environment overrides.
+- **Configuration File:** Optional `config.toml` (terminal geometry, color, accessibility) with `TERMIREQ_*` environment overrides.
 - **Cross-Platform:** Real PTY on Linux/macOS/WSL, buffered `subprocess` fallback on native Windows; CI runs the suite on all three across Python 3.11–3.13.
 
 ## Usage
@@ -44,7 +44,7 @@ python -m src.main replay session.bin --speak
 python -m src.main run --timeout 5.5 "sleep 10"
 ```
 
-Configuration is layered: a `config.toml` (see `configs/config.toml` for the schema) is overlaid by `TTYDIFF_*` environment variables (e.g. `TTYDIFF_THEME`, `TTYDIFF_ROWS`, `NO_COLOR`), which are in turn overridden by CLI flags.
+Configuration is layered: a `config.toml` (see `configs/config.toml` for the schema) is overlaid by `TERMIREQ_*` environment variables (e.g. `TERMIREQ_THEME`, `TERMIREQ_ROWS`, `NO_COLOR`), which are in turn overridden by CLI flags.
 
 ## Honest Limits & Disclosures
 In the spirit of the Zero Dependency Hackathon, we've implemented the core components ourselves. However, this means we've intentionally scoped out certain features:

@@ -3,7 +3,7 @@
 Reads raw terminal bytes and turns them into a stream of structured
 :class:`~src.contracts.ParserEvent` objects, one at a time, in order.
 
-Scope (locked in — see docs/ttydiff-plan.md, section 3):
+Scope (locked in — see docs/termireq-plan.md, section 3):
     - Cursor movement: CUU/CUD/CUF/CUB (relative), CUP (absolute position).
     - Erase: ED (erase display), EL (erase line).
     - SGR color/style codes.

@@ -1,1 +1,1 @@
-"""ttydiff test package. Placeholder."""
+"""termireq test package. Placeholder."""
