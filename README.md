@@ -1,6 +1,6 @@
-# TermiReq (tyydiff)
+# TermiReq
 
-**TermiReq** (also known as `tyydiff`) is a semantic diffing engine for terminal screens built entirely using Python's standard library. 
+**TermiReq** is a semantic diffing engine for terminal screens built entirely using Python's standard library. 
 
 It reads the raw byte stream a terminal program emits (including ANSI/VT100 escape sequences), maintains a virtual screen model, and reports **only what changed** between frames. This provides the foundational layer that a real screen reader or terminal-monitoring tool would sit on top of.
 

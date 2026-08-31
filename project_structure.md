@@ -1,7 +1,7 @@
 # Project Structure
 
 ```
-tyydiff/
+TermiReq/
 │
 ├── src/
 │   ├── parser.py        # ANSI/VT100 escape sequence parser

@@ -35,7 +35,7 @@ logger = get_logger(__name__)
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the CLI argument parser."""
     parser = argparse.ArgumentParser(
-        description="TermiReq (tyydiff): Terminal screen diffing tool."
+        description="TermiReq: Terminal screen diffing tool."
     )
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
