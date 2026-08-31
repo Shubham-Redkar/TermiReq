@@ -2,11 +2,14 @@
 
 PYTHON ?= python
 
-.PHONY: all demo test proof
-all: test proof
+.PHONY: all build demo test proof
+all: build test proof
 
-demo:
-	$(PYTHON) -m src.main run "echo hello"
+build:
+	chmod +x termireq
+
+demo: build
+	./termireq run "echo hello"
 
 test:
 	$(PYTHON) -m unittest discover -s tests -p "test_*.py"
