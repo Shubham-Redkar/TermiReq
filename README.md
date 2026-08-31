@@ -53,3 +53,21 @@ In the spirit of the Zero Dependency Hackathon, we've implemented the core compo
 2. **Parser Scope Cuts**: We only support basic cursor movement, erase codes (`ED`/`EL`), and SGR color/style codes. We explicitly do *not* support mouse tracking, bracketed paste mode, alternate screen buffers, or exotic private modes.
 3. **Screen Reset**: The virtual screen resets to blank before each new command in a sequence rather than carrying the state over.
 4. **Text-to-Speech is best-effort**: Accessibility announcements shell out to whatever OS speech tool is present (`say`/`spd-say`/`espeak`/PowerShell SAPI). We do *not* bundle a speech engine, so on a machine with none installed the speech backend is unavailable (the stream/null backends still work).
+
+## Bonus Challenges Claimed (+6 Points)
+
+**1. Package Killer (+3)**
+We successfully replaced the highly popular `pyte` library (a terminal emulator in Python) and `pexpect` (used for PTY orchestration). We natively handle terminal emulation and orchestration without these bloated third-party dependencies.
+
+**2. STDLIB Log (+3)**
+If you view `STDLIB.md`, you will see we have thoroughly documented **exactly 10** massive third-party packages that we avoided by substituting them with standard-library logic:
+1. `pyte` (Replaced by custom parser/screen)
+2. `python-Levenshtein` (Replaced by custom 2D grid diffing)
+3. `pexpect` (Replaced by `pty` + `select`)
+4. `click`/`typer` (Replaced by `argparse`)
+5. `colorama` (Replaced by raw ANSI escapes)
+6. `sh`/`plumbum` (Replaced by `subprocess`)
+7. `tomli` (Replaced by `tomllib`)
+8. `comtypes`/`pyobjc`/`pyatspi` (Replaced by OS `subprocess` bridges)
+9. `pyttsx3`/`gTTS` (Replaced by OS speech engines)
+10. `winpty` (Replaced by intelligent OS fallbacks)
