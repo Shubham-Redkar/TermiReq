@@ -21,27 +21,27 @@ It reads the raw byte stream a terminal program emits (including ANSI/VT100 esca
 
 ```bash
 # Run multiple commands sequentially and diff their output
-python -m src.main run "ls -la" "htop" "git status"
+./termireq run "ls -la" "htop" "git status"
 ```
 
 ```bash
 # Disable color, or emit accessibility announcements
-python -m src.main run "ls -la" --no-color
-python -m src.main run "make" --accessibility            # auto-selects a backend
-python -m src.main run "make" --speak                    # read the diff out loud
-python -m src.main run "ls" --a11y-backend stream        # write announcements to a stream
-python -m src.main run "ls" --config ./config.toml       # explicit config file
+./termireq run "ls -la" --no-color
+./termireq run "make" --accessibility            # auto-selects a backend
+./termireq run "make" --speak                    # read the diff out loud
+./termireq run "ls" --a11y-backend stream        # write announcements to a stream
+./termireq run "ls" --config ./config.toml       # explicit config file
 ```
 
 ```bash
 # Record a session to a binary file and replay it later
-python -m src.main record -o session.bin "htop"
-python -m src.main replay session.bin --speak
+./termireq record -o session.bin "htop"
+./termireq replay session.bin --speak
 ```
 
 ```bash
 # Set a timeout (in seconds) to prevent commands from hanging
-python -m src.main run --timeout 5.5 "sleep 10"
+./termireq run --timeout 5.5 "sleep 10"
 ```
 
 Configuration is layered: a `config.toml` (see `configs/config.toml` for the schema) is overlaid by `TERMIREQ_*` environment variables (e.g. `TERMIREQ_THEME`, `TERMIREQ_ROWS`, `NO_COLOR`), which are in turn overridden by CLI flags.
