@@ -12,6 +12,8 @@ It reads the raw byte stream a terminal program emits (including ANSI/VT100 esca
 - **Sequential Command Runner:** Feed it a list of shell commands, and it runs them one after another through a real pseudo-terminal (PTY) so programs emit full formatting, printing a diff summary after each.
 - **Colorized Diff Output:** Human-readable diffs are colorized (honoring `NO_COLOR` and tty detection); `--no-color` or config disables it.
 - **Accessibility Announcements:** Turns each diff into spoken/streamed announcements through the OS speech service (`say`/`spd-say`/`espeak`/PowerShell SAPI) — no third-party TTS package.
+- **Session Record & Replay:** Record raw terminal byte streams to binary files, and perfectly replay them later for debugging and automated UI testing.
+- **Command Timeouts:** Built-in safeguards (`--timeout`) to prevent hanging PTY subprocesses.
 - **Configuration File:** Optional `config.toml` (terminal geometry, color, accessibility) with `TTYDIFF_*` environment overrides.
 - **Cross-Platform:** Real PTY on Linux/macOS/WSL, buffered `subprocess` fallback on native Windows; CI runs the suite on all three across Python 3.11–3.13.
 
@@ -29,6 +31,17 @@ python -m src.main run "make" --accessibility            # auto-selects a backen
 python -m src.main run "make" --speak                    # read the diff out loud
 python -m src.main run "ls" --a11y-backend stream        # write announcements to a stream
 python -m src.main run "ls" --config ./config.toml       # explicit config file
+```
+
+```bash
+# Record a session to a binary file and replay it later
+python -m src.main record -o session.bin "htop"
+python -m src.main replay session.bin --speak
+```
+
+```bash
+# Set a timeout (in seconds) to prevent commands from hanging
+python -m src.main run --timeout 5.5 "sleep 10"
 ```
 
 Configuration is layered: a `config.toml` (see `configs/config.toml` for the schema) is overlaid by `TTYDIFF_*` environment variables (e.g. `TTYDIFF_THEME`, `TTYDIFF_ROWS`, `NO_COLOR`), which are in turn overridden by CLI flags.
