@@ -126,7 +126,7 @@ class ScreenState:
 
     def snapshot(self) -> ScreenState:
         """Return a deep copy for before/after diff comparisons."""
-        return ScreenState(
+        snap = ScreenState(
             rows=self.rows,
             cols=self.cols,
             grid=[
@@ -139,13 +139,13 @@ class ScreenState:
             is_alt_screen=self.is_alt_screen,
         )
         if self._main_grid is not None:
-            snapshot._main_grid = [
+            snap._main_grid = [
                 [Cell(char=cell.char, style=cell.style) for cell in row]
                 for row in self._main_grid
             ]
-            snapshot._main_cursor_row = self._main_cursor_row
-            snapshot._main_cursor_col = self._main_cursor_col
-        return snapshot
+            snap._main_cursor_row = self._main_cursor_row
+            snap._main_cursor_col = self._main_cursor_col
+        return snap
 
 
 

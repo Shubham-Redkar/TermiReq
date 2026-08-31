@@ -15,3 +15,7 @@ build/
 # TermiReq specific
 *.bin
 session.bin
+
+# Build artifacts
+*.pyz
+*.pyz.sha256

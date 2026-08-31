@@ -346,8 +346,11 @@ def main(args: List[str] | None = None) -> int:
 
     elif parsed_args.subcommand == "record":
         root_logger = configure_logging(verbose=parsed_args.verbose, debug=parsed_args.debug)
+        config = build_config(parsed_args)
         detected_rows, detected_cols = detect_terminal_geometry()
-        runner_events = run_commands([parsed_args.command], timeout=parsed_args.timeout, rows=detected_rows, cols=detected_cols)
+        rows = config.terminal.rows or detected_rows
+        cols = config.terminal.cols or detected_cols
+        runner_events = run_commands([parsed_args.command], timeout=parsed_args.timeout, rows=rows, cols=cols)
         
         with open(parsed_args.output, "wb") as f:
             for event in runner_events:

@@ -90,3 +90,60 @@ Config resolves in layers: a TOML file (explicit `--config`, then `./config.toml
 | `pyttsx3` / `gTTS` | `say` / `spd-say` / `espeak` / PowerShell SAPI | Zero-dep, offline audio path |
 
 The adapter layer (`NullAdapter` / `StreamAdapter` / `SpeechAdapter`, selected by `get_adapter`) turns diff results into `AccessibilityAnnouncement`s. Announcement priority follows the ARIA live-region convention (`polite` for success, `assertive` for failures). Windows TTS text is passed via the `TERMIREQ_TEXT` env var rather than interpolated into the command line, avoiding shell injection.
+
+---
+
+## Single File (`termireq.py`)
+
+The entire solution — contracts, logger, parser, screen, diff, runner, config, accessibility, and CLI — is contained in a single source file: `termireq.py`. This is the "Single File" bonus challenge (+5 pts).
+
+### How it works
+
+All 10 source modules (`contracts.py`, `logger.py`, `parser.py`, `screen.py`, `diff.py`, `runner.py`, `config.py`, `accessibility.py`, `cli.py`, `main.py`) are merged into `termireq.py` with clear section headers. The file is self-contained: every import is from the Python standard library only. No internal package imports remain.
+
+### Running directly
+
+```bash
+python termireq.py run "echo hello"
+```
+
+### What was avoided
+
+| Normally you'd need | Instead | Why |
+|---|---|---|
+| A package manager / `pip install` | Single file, no install | Zero setup — copy `termireq.py` anywhere and run |
+| A complex build system | `python -m zipapp` | Reproducible single-command build (see below) |
+| Multiple files + `__init__.py` | One flat file | Judges can read the entire solution in one scroll |
+
+---
+
+## Reproducible Build (`make build`)
+
+The build produces bit-for-bit identical `.pyz` artifacts across identical Python versions. This is the "Reproducible Build" bonus challenge (+5 pts).
+
+### How it works
+
+```bash
+make build          # produces termireq.pyz + termireq.pyz.sha256
+make verify         # checks SHA256 hash matches
+```
+
+The build uses `python -m zipapp` (stdlib) to package `termireq.py` into a `.pyz` (Python zipapp). The SHA256 hash is written to `termireq.pyz.sha256` and can be verified with `make verify`.
+
+### Why it's reproducible
+
+- `zipapp` is a deterministic stdlib tool: same input → same output.
+- The hash is computed over the `.pyz` binary, not timestamps or metadata.
+- Any identical Python environment (same version, same OS) will produce the same `.pyz` byte-for-byte.
+
+### Running the built artifact
+
+```bash
+python termireq.pyz run "echo hello"
+# or on Unix:
+./termireq.pyz run "echo hello"
+```
+
+### Dependencies used
+
+**Zero.** The build tool (`python -m zipapp`) and hash tool (`hashlib`) are both Python standard library modules. No third-party build tools, no vendored code.

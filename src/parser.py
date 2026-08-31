@@ -321,7 +321,14 @@ class ANSIParser:
                         fg = name if name is not None else fg
                     else:
                         bg = name if name is not None else bg
-                i += 1
+                # Skip past consumed params: 38/48 + mode + value(s)
+                n = len(params)
+                if i + 1 < n and params[i + 1] == 5:
+                    i += 3  # 38;5;N or 48;5;N
+                elif i + 1 < n and params[i + 1] == 2:
+                    i += 6  # 38;2;R;G;B or 48;2;R;G;B
+                else:
+                    i += 1
                 continue
             i += 1
 
