@@ -25,6 +25,7 @@ from typing import Callable, List, Optional
 from .contracts import (
     AccessibilityAnnouncement, Cell, ClearLine, ClearScreen, MoveCursor,
     PrintChar, RestoreCursor, SaveCursor, ScreenState, SetStyle, SetTitle, Style,
+    SwitchToAlternateScreen, SwitchToMainScreen,
 )
 from .logger import get_logger
 
@@ -126,6 +127,28 @@ def apply_event(
                     text=f"Window title: {event.title}", kind="title"
                 )
             )
+    elif isinstance(event, SwitchToAlternateScreen):
+        if not state.is_alt_screen:
+            state._main_grid = state.grid
+            state._main_cursor_row = state.cursor_row
+            state._main_cursor_col = state.cursor_col
+            state.grid = [[Cell(" ") for _ in range(state.cols)] for _ in range(state.rows)]
+            state.cursor_row = 0
+            state.cursor_col = 0
+            state.is_alt_screen = True
+            logger.debug("switched to alternate screen")
+            if dirty is not None:
+                dirty.mark_all()
+    elif isinstance(event, SwitchToMainScreen):
+        if state.is_alt_screen:
+            if state._main_grid is not None:
+                state.grid = state._main_grid
+                state.cursor_row = state._main_cursor_row
+                state.cursor_col = state._main_cursor_col
+            state.is_alt_screen = False
+            logger.debug("switched to main screen")
+            if dirty is not None:
+                dirty.mark_all()
     # UnknownSequence and anything unrecognized: ignore (the parser already
     # emitted a diagnostic; we must never crash the pipeline).
 

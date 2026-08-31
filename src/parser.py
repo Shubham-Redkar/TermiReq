@@ -29,7 +29,8 @@ from typing import Iterator, List, Tuple
 
 from .contracts import (
     ClearLine, ClearScreen, MoveCursor, ParserEvent, PrintChar, RestoreCursor,
-    SaveCursor, SetStyle, SetTitle, Style, UnknownSequence,
+    SaveCursor, SetStyle, SetTitle, Style, SwitchToAlternateScreen,
+    SwitchToMainScreen, UnknownSequence,
 )
 from .logger import get_logger
 
@@ -226,8 +227,13 @@ class ANSIParser:
         j += 1
 
         # Private-mode sequences (mouse, hide/show cursor, alt screen, etc.)
-        # are out of scope -> UnknownSequence.
+        # are mostly out of scope, except for Alternate Screen (1049, 1047, 47).
         if private:
+            params = [int(p) if p else 0 for p in params_str.split(";")] if params_str else []
+            if final == "h" and 1049 in params:
+                return j, [SwitchToAlternateScreen(start)]
+            if final == "l" and 1049 in params:
+                return j, [SwitchToMainScreen(start)]
             return j, [UnknownSequence(data[start:j], start)]
 
         # Parse numeric parameters; empty slots become 0 (e.g. "\x1b[;31m").

@@ -76,6 +76,16 @@ class UnknownSequence:
     byte_offset: int
 
 
+@dataclass
+class SwitchToAlternateScreen:
+    byte_offset: int
+
+
+@dataclass
+class SwitchToMainScreen:
+    byte_offset: int
+
+
 ParserEvent = Union[
     PrintChar,
     MoveCursor,
@@ -85,6 +95,8 @@ ParserEvent = Union[
     SaveCursor,
     RestoreCursor,
     SetTitle,
+    SwitchToAlternateScreen,
+    SwitchToMainScreen,
     UnknownSequence,
 ]
 
@@ -98,6 +110,10 @@ class ScreenState:
     cursor_row: int
     cursor_col: int
     title: str | None = None
+    is_alt_screen: bool = False
+    _main_grid: list[list[Cell]] | None = None
+    _main_cursor_row: int = 0
+    _main_cursor_col: int = 0
 
     @classmethod
     def blank(cls, rows: int, cols: int) -> ScreenState:
@@ -120,7 +136,16 @@ class ScreenState:
             cursor_row=self.cursor_row,
             cursor_col=self.cursor_col,
             title=self.title,
+            is_alt_screen=self.is_alt_screen,
         )
+        if self._main_grid is not None:
+            snapshot._main_grid = [
+                [Cell(char=cell.char, style=cell.style) for cell in row]
+                for row in self._main_grid
+            ]
+            snapshot._main_cursor_row = self._main_cursor_row
+            snapshot._main_cursor_col = self._main_cursor_col
+        return snapshot
 
 
 
