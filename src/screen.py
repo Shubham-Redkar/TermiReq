@@ -5,7 +5,7 @@ position and per-cell character + style. Mutates the :class:`ScreenState` in
 place; call :meth:`ScreenState.snapshot` before any diff
 comparison.
 
-Design decisions baked in (see docs/termireq-t0-contract.md):
+Design decisions baked in:
     - ``apply_event(state, event)`` mutates ``state`` in place and returns None.
     - ``ScreenState.snapshot()`` is a real deep copy (non-negotiable for diffing).
     - The screen resets to blank between commands (a documented limitation).

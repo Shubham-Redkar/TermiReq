@@ -50,7 +50,7 @@ Configuration is layered: a `config.toml` (see `configs/config.toml` for the sch
 In the spirit of the Zero Dependency Hackathon, we've implemented the core components ourselves. However, this means we've intentionally scoped out certain features:
 
 1. **PTY is Unix-only**: We use Python's built-in `pty` module (Unix/macOS/WSL). On **native Windows** the runner transparently falls back to buffered `subprocess`, so the suite and CI run everywhere, but programs may suppress ANSI codes and TUIs won't behave like a real terminal. We deliberately do *not* pull in a `winpty` shim, to keep the zero-dependency guarantee.
-2. **Parser Scope Cuts**: We only support basic cursor movement, erase codes (`ED`/`EL`), and SGR color/style codes. We explicitly do *not* support mouse tracking, bracketed paste mode, alternate screen buffers, or exotic private modes.
+2. **Parser Scope Cuts**: We only support basic cursor movement, erase codes (`ED`/`EL`), and SGR color/style codes. We explicitly do *not* support mouse tracking, bracketed paste mode, or exotic private modes.
 3. **Screen Reset**: The virtual screen resets to blank before each new command in a sequence rather than carrying the state over.
 4. **Text-to-Speech is best-effort**: Accessibility announcements shell out to whatever OS speech tool is present (`say`/`spd-say`/`espeak`/PowerShell SAPI). We do *not* bundle a speech engine, so on a machine with none installed the speech backend is unavailable (the stream/null backends still work).
 
